@@ -102,6 +102,14 @@
       transition: filter 0.15s;
     }
     .reset-btn:hover { filter: brightness(1.1); }
+    @media (max-width: 640px) {
+      body { padding: 16px 12px 48px; }
+      h1 { font-size: 1.6rem; }
+      .status { font-size: 1rem; }
+      .board { width: min(320px, 88vw); gap: 6px; }
+      .cell { border-radius: 12px; }
+      .reset-btn { padding: 12px 24px; font-size: 0.95rem; }
+    }
   </style>
 </head>
 <body>

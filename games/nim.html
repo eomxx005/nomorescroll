@@ -428,6 +428,21 @@
             .lang-grid  { gap:10px; }
             .lang-card  { min-width:120px; padding:18px 20px; }
         }
+
+        /* nomorescroll mobile patch */
+        @media (max-width: 640px) {
+            body { padding: 8px !important; }
+            canvas { max-width: 92vw !important; height: auto !important; display: block !important; }
+            .side-panel, .panel, [class*="side-panel"] {
+                width: 100% !important; max-width: 360px !important;
+                box-sizing: border-box !important;
+            }
+            .game-row, .container-row, [class*="game-row"], [class*="row"] {
+                flex-direction: column !important; align-items: center !important;
+            }
+            button { min-height: 44px; }
+            .lang-grid, .rule-cards { grid-template-columns: 1fr 1fr !important; }
+        }
     </style>
 </head>
 <body>

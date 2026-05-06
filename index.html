@@ -246,12 +246,24 @@
     .modal button.submit { background: var(--accent); color: #1a1a1a; }
     .modal button:hover { filter: brightness(1.1); }
 
-    @media (max-width: 480px) {
+    @media (max-width: 640px) {
+      body { padding: 20px 12px 48px; }
       header { margin-bottom: 32px; }
-      .games-grid { gap: 12px; }
-      .game-card { min-height: 160px; padding: 20px 16px; }
+      .tagline { font-size: 1.7rem; }
+      .sub { font-size: 0.95rem; }
+      .trust { font-size: 0.85rem; gap: 6px 12px; }
+      .games-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .game-card { min-height: 140px; padding: 16px 14px; gap: 8px; }
+      .game-card .emoji { font-size: 2rem; }
+      .game-card h2 { font-size: 1.05rem; }
+      .game-card .meta { font-size: 0.75rem; }
+      .game-card .ko-only-badge { font-size: 0.6rem; padding: 2px 6px; top: 10px; right: 10px; }
       .modal { padding: 24px; }
       .problem { font-size: 2rem; padding: 20px; }
+      .top-bar { margin-bottom: 16px; }
+    }
+    @media (max-width: 360px) {
+      .games-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
