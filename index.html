@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f2027">
+  <title>nomorescroll — Quiet board games for kids</title>
+  <meta name="description" content="Calm board games for kids 5-10. No ads. No sign-up. No tracking.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-1: #0f2027;
+      --bg-2: #203a43;
+      --bg-3: #2c5364;
+      --accent: #ffc107;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Inter', 'Apple SD Gothic Neo', 'Pretendard', 'PingFang SC',
+                   'Hiragino Sans', 'Malgun Gothic', -apple-system, BlinkMacSystemFont,
+                   'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+    }
+
+    .top-bar {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .lang-select {
+      appearance: none;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 32px 8px 12px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    .lang-select:hover { background-color: rgba(255, 255, 255, 0.14); }
+
+    header {
+      text-align: center;
+      max-width: 720px;
+      margin-bottom: 48px;
+    }
+
+    .brand {
+      display: inline-block;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .tagline {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .tagline .pop { color: var(--accent); }
+
+    .sub {
+      font-size: 1.05rem;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.6;
+    }
+
+    .trust {
+      margin-top: 24px;
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      justify-content: center;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.65);
+    }
+    .trust span::before { content: "·"; margin-right: 8px; color: var(--accent); }
+    .trust span:first-child::before { display: none; }
+
+    main { width: 100%; max-width: 960px; }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .game-card {
+      appearance: none;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 24px 20px;
+      color: #fff;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 180px;
+      position: relative;
+    }
+
+    .game-card:hover:not(:disabled), .game-card:focus-visible {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+    }
+
+    .game-card:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    .game-card .emoji { font-size: 2.6rem; line-height: 1; }
+    .game-card h2 { font-size: 1.4rem; font-weight: 700; }
+    .game-card .meta {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: auto;
+    }
+    .game-card .ko-only-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 193, 7, 0.2);
+      color: var(--accent);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .footer-link {
+      display: block;
+      text-align: center;
+      margin-top: 56px;
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      font-size: 1rem;
+      padding: 12px;
+    }
+    .footer-link:hover { color: var(--accent); }
+
+    /* Parent Gate Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      z-index: 100;
+    }
+    .modal-backdrop[hidden] { display: none; }
+
+    .modal {
+      background: linear-gradient(135deg, #1a2530, #2c3e50);
+      border: 2px solid rgba(255, 193, 7, 0.4);
+      border-radius: 24px;
+      padding: 32px;
+      max-width: 420px; width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    .modal h3 { font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; }
+    .modal .hint {
+      font-size: 0.95rem; color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 24px; line-height: 1.5;
+    }
+
+    .problem {
+      background: rgba(255, 193, 7, 0.1);
+      border: 2px solid rgba(255, 193, 7, 0.3);
+      border-radius: 16px;
+      padding: 24px; text-align: center;
+      font-size: 2.4rem; font-weight: 800;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .modal input[type="number"] {
+      width: 100%;
+      font-family: inherit;
+      font-size: 1.5rem;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .modal input[type="number"]:focus { border-color: var(--accent); }
+    .modal input[type="number"]::-webkit-inner-spin-button,
+    .modal input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none; margin: 0;
+    }
+    .modal input[type="number"] { -moz-appearance: textfield; }
+
+    .modal .error {
+      color: #ff6b6b;
+      font-size: 0.95rem;
+      margin-top: 12px;
+      min-height: 1.2em;
+    }
+
+    .modal .buttons { display: flex; gap: 12px; margin-top: 20px; }
+    .modal button {
+      flex: 1;
+      appearance: none; border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 1rem; font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .modal button.cancel { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.8); }
+    .modal button.submit { background: var(--accent); color: #1a1a1a; }
+    .modal button:hover { filter: brightness(1.1); }
+
+    @media (max-width: 480px) {
+      header { margin-bottom: 32px; }
+      .games-grid { gap: 12px; }
+      .game-card { min-height: 160px; padding: 20px 16px; }
+      .modal { padding: 24px; }
+      .problem { font-size: 2rem; padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <select class="lang-select" id="lang-select" aria-label="Language">
+      <option value="en">English</option>
+      <option value="ko">한국어</option>
+      <option value="zh">中文</option>
+      <option value="ja">日本語</option>
+    </select>
+  </div>
+
+  <header>
+    <span class="brand">nomorescroll</span>
+    <h1 class="tagline">
+      <span data-i18n="tagline_part1">Make a move,</span>
+      <span class="pop" data-i18n="tagline_pop">not a scroll.</span>
+    </h1>
+    <p class="sub" data-i18n="subtitle" data-i18n-html>
+      Calm board games for kids 5-10.<br>
+      No ads, no sign-up, no recommendation algorithm.
+    </p>
+    <p class="trust">
+      <span data-i18n="trust_no_ads">No ads</span>
+      <span data-i18n="trust_no_signup">No sign-up</span>
+      <span data-i18n="trust_no_tracking">No tracking</span>
+      <span data-i18n="trust_offline">Works offline</span>
+    </p>
+  </header>
+
+  <main>
+    <div class="games-grid" id="games-grid">
+      <button class="game-card" data-game="tictactoe">
+        <span class="emoji">❌⭕</span>
+        <h2 data-i18n="game_tictactoe_name">Tic-Tac-Toe</h2>
+        <p class="meta" data-i18n="game_tictactoe_meta">Age 5+ · 1-3 min</p>
+      </button>
+      <button class="game-card" data-game="nim">
+        <span class="emoji">🪙</span>
+        <h2 data-i18n="game_nim_name">Nim</h2>
+        <p class="meta" data-i18n="game_nim_meta">Age 5+ · 5 min</p>
+      </button>
+      <button class="game-card" data-game="connect4">
+        <span class="emoji">🔴🟡</span>
+        <h2 data-i18n="game_connect4_name">Connect Four</h2>
+        <p class="meta" data-i18n="game_connect4_meta">Age 6+ · 5 min</p>
+      </button>
+      <button class="game-card" data-game="gomoku">
+        <span class="emoji">⚫⚪</span>
+        <h2 data-i18n="game_gomoku_name">Gomoku</h2>
+        <p class="meta" data-i18n="game_gomoku_meta">Age 6+ · 10 min</p>
+      </button>
+      <button class="game-card" data-game="chess">
+        <span class="emoji">♟️</span>
+        <h2 data-i18n="game_chess_name">Chess</h2>
+        <p class="meta" data-i18n="game_chess_meta">Age 6+ · 15 min</p>
+      </button>
+      <button class="game-card" data-game="reversi">
+        <span class="emoji">⚫⚪</span>
+        <h2 data-i18n="game_reversi_name">Reversi</h2>
+        <p class="meta" data-i18n="game_reversi_meta">Age 8+ · 10-15 min</p>
+      </button>
+      <button class="game-card" data-game="go">
+        <span class="emoji">🎯</span>
+        <h2 data-i18n="game_go_name">Go</h2>
+        <p class="meta" data-i18n="game_go_meta">Age 7+ · 10-20 min</p>
+      </button>
+      <button class="game-card" data-game="baduk" data-ko-only="true">
+        <span class="ko-only-badge" data-i18n="badge_korean_only">KO ONLY</span>
+        <span class="emoji">📖</span>
+        <h2 data-i18n="game_baduk_name">Baduk Class (Korean)</h2>
+        <p class="meta" data-i18n="game_baduk_meta">Age 7+ · Korean only · Step-by-step</p>
+      </button>
+    </div>
+
+    <a href="about.html" class="footer-link" data-i18n="footer_link">For parents — our promise →</a>
+  </main>
+
+  <div class="modal-backdrop" id="gate" hidden>
+    <div class="modal" role="dialog" aria-labelledby="gate-title" aria-modal="true">
+      <h3 id="gate-title" data-i18n="gate_title">Parent check</h3>
+      <p class="hint" data-i18n="gate_hint">Solve a quick addition so kids can't slip past on their own.</p>
+      <div class="problem">
+        <span id="num-a">17</span> + <span id="num-b">28</span> = ?
+      </div>
+      <input type="number" id="answer" inputmode="numeric" autocomplete="off" data-i18n-placeholder="gate_input">
+      <p class="error" id="error" role="alert"></p>
+      <div class="buttons">
+        <button class="cancel" id="cancel" data-i18n="gate_cancel">Cancel</button>
+        <button class="submit" id="submit" data-i18n="gate_submit">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const I18N = {
+      en: {
+        tagline_part1: "Make a move,", tagline_pop: "not a scroll.",
+        subtitle: "Calm board games for kids 5-10.<br>No ads, no sign-up, no recommendation algorithm.",
+        trust_no_ads: "No ads", trust_no_signup: "No sign-up",
+        trust_no_tracking: "No tracking", trust_offline: "Works offline",
+        game_tictactoe_name: "Tic-Tac-Toe", game_tictactoe_meta: "Age 5+ · 1-3 min",
+        game_nim_name: "Nim", game_nim_meta: "Age 5+ · 5 min",
+        game_connect4_name: "Connect Four", game_connect4_meta: "Age 6+ · 5 min",
+        game_gomoku_name: "Gomoku", game_gomoku_meta: "Age 6+ · 10 min",
+        game_chess_name: "Chess", game_chess_meta: "Age 6+ · 15 min",
+        game_reversi_name: "Reversi", game_reversi_meta: "Age 8+ · 10-15 min",
+        game_go_name: "Go", game_go_meta: "Age 7+ · 10-20 min",
+        game_baduk_name: "Baduk Class (Korean)", game_baduk_meta: "Age 7+ · Korean only · Step-by-step",
+        badge_korean_only: "KO ONLY",
+        footer_link: "For parents — our promise →",
+        gate_title: "Parent check",
+        gate_hint: "Solve a quick addition so kids can't slip past on their own.",
+        gate_input: "Enter the answer",
+        gate_cancel: "Cancel", gate_submit: "Confirm",
+        gate_error_invalid: "Please enter a number.",
+        gate_error_wrong: "That's not right. Try again.",
+        gate_baduk_locked: "This game is in Korean only. Switch language to 한국어 to play.",
+      },
+      ko: {
+        tagline_part1: "스크롤 대신,", tagline_pop: "한 수.",
+        subtitle: "5-10세를 위한 차분한 보드게임.<br>광고, 가입, 추천 알고리즘 없음.",
+        trust_no_ads: "광고 없음", trust_no_signup: "가입 없음",
+        trust_no_tracking: "데이터 수집 없음", trust_offline: "오프라인 가능",
+        game_tictactoe_name: "삼목 (틱택토)", game_tictactoe_meta: "5세+ · 1-3분",
+        game_nim_name: "님 게임", game_nim_meta: "5세+ · 5분",
+        game_connect4_name: "커넥트 포", game_connect4_meta: "6세+ · 5분",
+        game_gomoku_name: "오목", game_gomoku_meta: "6세+ · 10분",
+        game_chess_name: "체스", game_chess_meta: "6세+ · 15분",
+        game_reversi_name: "리버시 (오델로)", game_reversi_meta: "8세+ · 10-15분",
+        game_go_name: "바둑", game_go_meta: "7세+ · 10-20분",
+        game_baduk_name: "바둑 교실 (한국어)", game_baduk_meta: "7세+ · 한국어 전용 · 단계별",
+        badge_korean_only: "한국어",
+        footer_link: "부모님께 — 사이트의 약속 →",
+        gate_title: "부모님 확인",
+        gate_hint: "아이가 혼자 들어가지 못하도록 간단한 덧셈을 풀어주세요.",
+        gate_input: "답을 입력하세요",
+        gate_cancel: "취소", gate_submit: "확인",
+        gate_error_invalid: "숫자를 입력해주세요.",
+        gate_error_wrong: "답이 맞지 않아요. 다시 확인해주세요.",
+        gate_baduk_locked: "이 게임은 한국어 전용입니다. 한국어로 전환하면 플레이할 수 있어요.",
+      },
+      zh: {
+        tagline_part1: "落子,", tagline_pop: "而非滑动。",
+        subtitle: "为5-10岁孩子设计的安静棋盘游戏。<br>无广告、无注册、无推荐算法。",
+        trust_no_ads: "无广告", trust_no_signup: "无注册",
+        trust_no_tracking: "无追踪", trust_offline: "可离线",
+        game_tictactoe_name: "井字棋", game_tictactoe_meta: "5岁+ · 1-3分钟",
+        game_nim_name: "尼姆游戏", game_nim_meta: "5岁+ · 5分钟",
+        game_connect4_name: "四子棋", game_connect4_meta: "6岁+ · 5分钟",
+        game_gomoku_name: "五子棋", game_gomoku_meta: "6岁+ · 10分钟",
+        game_chess_name: "国际象棋", game_chess_meta: "6岁+ · 15分钟",
+        game_reversi_name: "黑白棋", game_reversi_meta: "8岁+ · 10-15分钟",
+        game_go_name: "围棋", game_go_meta: "7岁+ · 10-20分钟",
+        game_baduk_name: "围棋教室 (韩语)", game_baduk_meta: "7岁+ · 仅韩语 · 分步教学",
+        badge_korean_only: "仅韩语",
+        footer_link: "致家长 — 我们的承诺 →",
+        gate_title: "家长确认",
+        gate_hint: "请家长解一道简单的加法题。",
+        gate_input: "请输入答案",
+        gate_cancel: "取消", gate_submit: "确认",
+        gate_error_invalid: "请输入数字。",
+        gate_error_wrong: "答案不对,请重试。",
+        gate_baduk_locked: "此游戏仅支持韩语。切换至韩语后可游玩。",
+      },
+      ja: {
+        tagline_part1: "スクロールではなく,", tagline_pop: "一手を。",
+        subtitle: "5〜10歳向けの静かなボードゲーム。<br>広告なし、登録なし、レコメンドなし。",
+        trust_no_ads: "広告なし", trust_no_signup: "登録なし",
+        trust_no_tracking: "追跡なし", trust_offline: "オフラインOK",
+        game_tictactoe_name: "三目並べ", game_tictactoe_meta: "5歳+ · 1-3分",
+        game_nim_name: "ニム", game_nim_meta: "5歳+ · 5分",
+        game_connect4_name: "コネクトフォー", game_connect4_meta: "6歳+ · 5分",
+        game_gomoku_name: "五目並べ", game_gomoku_meta: "6歳+ · 10分",
+        game_chess_name: "チェス", game_chess_meta: "6歳+ · 15分",
+        game_reversi_name: "リバーシ (オセロ)", game_reversi_meta: "8歳+ · 10-15分",
+        game_go_name: "囲碁", game_go_meta: "7歳+ · 10-20分",
+        game_baduk_name: "囲碁教室 (韓国語)", game_baduk_meta: "7歳+ · 韓国語のみ · 段階別",
+        badge_korean_only: "韓国語のみ",
+        footer_link: "保護者の方へ — 私たちの約束 →",
+        gate_title: "保護者確認",
+        gate_hint: "お子さんが一人で進めないよう、簡単な足し算を解いてください。",
+        gate_input: "答えを入力",
+        gate_cancel: "キャンセル", gate_submit: "確認",
+        gate_error_invalid: "数字を入力してください。",
+        gate_error_wrong: "答えが違います。もう一度。",
+        gate_baduk_locked: "このゲームは韓国語のみです。韓国語に切り替えてください。",
+      },
+    };
+
+    const STORAGE_KEY = "nomorescroll-lang";
+    const SUPPORTED = ["en", "ko", "zh", "ja"];
+
+    function detectLang() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && SUPPORTED.includes(saved)) return saved;
+      return "en";
+    }
+
+    function applyLang(lang) {
+      const dict = I18N[lang] || I18N.en;
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const key = el.dataset.i18n;
+        const val = dict[key];
+        if (typeof val !== "string") return;
+        if (el.hasAttribute("data-i18n-html")) el.innerHTML = val;
+        else el.textContent = val;
+      });
+      document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+        const key = el.dataset.i18nPlaceholder;
+        if (typeof dict[key] === "string") el.placeholder = dict[key];
+      });
+      // baduk card disabled state
+      document.querySelectorAll(".game-card[data-ko-only='true']").forEach((card) => {
+        if (lang === "ko") {
+          card.disabled = false;
+          card.title = "";
+        } else {
+          card.disabled = true;
+          card.title = dict.gate_baduk_locked || "";
+        }
+      });
+      localStorage.setItem(STORAGE_KEY, lang);
+    }
+
+    const langSelect = document.getElementById("lang-select");
+    let currentLang = detectLang();
+    langSelect.value = currentLang;
+    applyLang(currentLang);
+    langSelect.addEventListener("change", (e) => {
+      currentLang = e.target.value;
+      applyLang(currentLang);
+    });
+
+    // Parent gate
+    (function () {
+      const gate = document.getElementById("gate");
+      const numA = document.getElementById("num-a");
+      const numB = document.getElementById("num-b");
+      const answerInput = document.getElementById("answer");
+      const errorEl = document.getElementById("error");
+      const cancelBtn = document.getElementById("cancel");
+      const submitBtn = document.getElementById("submit");
+
+      let pendingGame = null;
+      let expected = 0;
+
+      function generateProblem() {
+        const a = Math.floor(Math.random() * 80) + 11;
+        const b = Math.floor(Math.random() * 80) + 11;
+        numA.textContent = a;
+        numB.textContent = b;
+        expected = a + b;
+      }
+
+      function openGate(gameKey) {
+        pendingGame = gameKey;
+        generateProblem();
+        answerInput.value = "";
+        errorEl.textContent = "";
+        gate.hidden = false;
+        setTimeout(() => answerInput.focus(), 50);
+      }
+
+      function closeGate() {
+        gate.hidden = true;
+        pendingGame = null;
+      }
+
+      function tryUnlock() {
+        const dict = I18N[currentLang] || I18N.en;
+        const value = parseInt(answerInput.value, 10);
+        if (Number.isNaN(value)) {
+          errorEl.textContent = dict.gate_error_invalid;
+          return;
+        }
+        if (value !== expected) {
+          errorEl.textContent = dict.gate_error_wrong;
+          answerInput.select();
+          return;
+        }
+        const target = `games/${pendingGame}.html?lang=${currentLang}`;
+        closeGate();
+        window.location.href = target;
+      }
+
+      document.querySelectorAll(".game-card").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (btn.disabled) return;
+          openGate(btn.dataset.game);
+        });
+      });
+
+      submitBtn.addEventListener("click", tryUnlock);
+      cancelBtn.addEventListener("click", closeGate);
+      answerInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); tryUnlock(); }
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !gate.hidden) closeGate();
+      });
+      gate.addEventListener("click", (e) => {
+        if (e.target === gate) closeGate();
+      });
+    })();
+  </script>
+</body>
+</html>

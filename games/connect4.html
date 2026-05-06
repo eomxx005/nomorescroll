@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f2027">
+  <title>Connect Four — nomorescroll</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg-1:#0f2027; --bg-2:#203a43; --bg-3:#2c5364; --accent:#ffc107;
+            --board:#1565c0; --red:#e53935; --yellow:#fdd835; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter','Apple SD Gothic Neo','Pretendard','PingFang SC','Hiragino Sans','Malgun Gothic',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+      background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
+      color: #fff; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 24px 16px 64px;
+    }
+    .top-bar {
+      width: 100%; max-width: 560px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px;
+    }
+    .back { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 0.95rem; }
+    .back:hover { color: var(--accent); }
+    .lang-select {
+      appearance: none;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 6px 28px 6px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem; font-family: inherit; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+    }
+
+    h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; text-align: center; }
+    .status {
+      font-size: 1.05rem; color: rgba(255,255,255,0.85);
+      margin-bottom: 16px; text-align: center; min-height: 1.6em;
+    }
+    .status.red { color: var(--red); font-weight: 700; }
+    .status.yellow { color: var(--yellow); font-weight: 700; }
+    .status.draw { color: var(--accent); font-weight: 700; }
+
+    .mode-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .mode-btn {
+      appearance: none; border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.06); color: #fff;
+      padding: 8px 16px; border-radius: 10px;
+      font-size: 0.9rem; font-family: inherit; cursor: pointer;
+    }
+    .mode-btn.active { border-color: var(--accent); background: rgba(255,193,7,0.15); }
+
+    .board-wrap {
+      background: var(--board);
+      padding: 12px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      margin-bottom: 20px;
+      width: min(490px, 96vw);
+    }
+    .cols {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    .col-btn {
+      appearance: none; border: none;
+      background: transparent;
+      cursor: pointer; padding: 0;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .col-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+    .cell {
+      aspect-ratio: 1;
+      background: rgba(0,0,0,0.5);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .cell.r { background: var(--red); box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25); }
+    .cell.y { background: var(--yellow); box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25); }
+    .cell.win { box-shadow: 0 0 0 3px #fff, inset 0 -3px 0 rgba(0,0,0,0.25); }
+    .col-btn:hover:not(:disabled) .cell:first-child {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .reset-btn {
+      appearance: none; border: none;
+      background: var(--accent); color: #1a1a1a;
+      padding: 14px 28px; border-radius: 12px;
+      font-size: 1rem; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+    }
+    .reset-btn:hover { filter: brightness(1.1); }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="../index.html" class="back" data-i18n="back">← Back</a>
+    <select class="lang-select" id="lang-select" aria-label="Language">
+      <option value="en">English</option>
+      <option value="ko">한국어</option>
+      <option value="zh">中文</option>
+      <option value="ja">日本語</option>
+    </select>
+  </div>
+
+  <h1 data-i18n="title">Connect Four</h1>
+  <p class="status" id="status" data-i18n="your_turn">Your turn (Red)</p>
+
+  <div class="mode-row">
+    <button class="mode-btn active" data-mode="ai" data-i18n="vs_ai">vs AI</button>
+    <button class="mode-btn" data-mode="human" data-i18n="vs_human">2 Players</button>
+  </div>
+
+  <div class="board-wrap">
+    <div class="cols" id="cols"></div>
+  </div>
+
+  <button class="reset-btn" id="reset" data-i18n="new_game">New Game</button>
+
+  <script>
+    const I18N = {
+      en: { back:"← Back", title:"Connect Four", vs_ai:"vs AI", vs_human:"2 Players", new_game:"New Game",
+        your_turn:"Your turn (Red)", ai_turn:"AI thinking...", red_turn:"Red's turn", yellow_turn:"Yellow's turn",
+        you_win:"You win! 🎉", you_lose:"AI wins.", red_wins:"Red wins! 🎉", yellow_wins:"Yellow wins! 🎉", draw:"It's a draw." },
+      ko: { back:"← 뒤로", title:"커넥트 포", vs_ai:"AI 대전", vs_human:"2인용", new_game:"새 게임",
+        your_turn:"내 차례 (빨강)", ai_turn:"AI 생각 중...", red_turn:"빨강 차례", yellow_turn:"노랑 차례",
+        you_win:"이겼어요! 🎉", you_lose:"AI가 이겼어요.", red_wins:"빨강 승리! 🎉", yellow_wins:"노랑 승리! 🎉", draw:"비겼어요." },
+      zh: { back:"← 返回", title:"四子棋", vs_ai:"对战AI", vs_human:"双人", new_game:"新游戏",
+        your_turn:"你的回合 (红)", ai_turn:"AI 思考中...", red_turn:"红方回合", yellow_turn:"黄方回合",
+        you_win:"你赢了!🎉", you_lose:"AI 赢了。", red_wins:"红方获胜!🎉", yellow_wins:"黄方获胜!🎉", draw:"平局。" },
+      ja: { back:"← 戻る", title:"コネクトフォー", vs_ai:"AI対戦", vs_human:"2人対戦", new_game:"新しいゲーム",
+        your_turn:"あなたの番 (赤)", ai_turn:"AI 思考中...", red_turn:"赤の番", yellow_turn:"黄の番",
+        you_win:"あなたの勝ち! 🎉", you_lose:"AI の勝ち。", red_wins:"赤の勝ち! 🎉", yellow_wins:"黄の勝ち! 🎉", draw:"引き分け。" },
+    };
+
+    const STORAGE = "nomorescroll-lang";
+    const SUPPORTED = ["en","ko","zh","ja"];
+    function detectLang() {
+      const u = new URLSearchParams(location.search).get("lang");
+      if (u && SUPPORTED.includes(u)) { localStorage.setItem(STORAGE, u); return u; }
+      const s = localStorage.getItem(STORAGE);
+      if (s && SUPPORTED.includes(s)) return s;
+      return "en";
+    }
+    let lang = detectLang();
+    function t(k) { return (I18N[lang] || I18N.en)[k] || k; }
+
+    const ROWS = 6, COLS = 7;
+    let grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    let redTurn = true; // R = human (in AI mode), Y = AI
+    let mode = "ai";
+    let gameOver = false;
+    let winCells = [];
+
+    const colsEl = document.getElementById("cols");
+    const statusEl = document.getElementById("status");
+
+    function applyLang() {
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+      });
+      updateStatus();
+    }
+
+    function checkWin(g, r, c, p) {
+      // returns array of winning cells or null
+      const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+      for (const [dr, dc] of dirs) {
+        const cells = [[r,c]];
+        for (let k = 1; k < 4; k++) {
+          const nr = r + dr*k, nc = c + dc*k;
+          if (nr<0||nr>=ROWS||nc<0||nc>=COLS||g[nr][nc]!==p) break;
+          cells.push([nr,nc]);
+        }
+        for (let k = 1; k < 4; k++) {
+          const nr = r - dr*k, nc = c - dc*k;
+          if (nr<0||nr>=ROWS||nc<0||nc>=COLS||g[nr][nc]!==p) break;
+          cells.push([nr,nc]);
+        }
+        if (cells.length >= 4) return cells.slice(0, 7); // mark them
+      }
+      return null;
+    }
+
+    function isFull() {
+      return grid[0].every(v => v !== null);
+    }
+
+    function dropInCol(g, c, p) {
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (!g[r][c]) { g[r][c] = p; return r; }
+      }
+      return -1;
+    }
+
+    function updateStatus() {
+      if (!gameOver) {
+        if (mode === "ai") {
+          statusEl.textContent = redTurn ? t("your_turn") : t("ai_turn");
+        } else {
+          statusEl.textContent = redTurn ? t("red_turn") : t("yellow_turn");
+        }
+        statusEl.className = "status";
+        return;
+      }
+    }
+
+    function render() {
+      colsEl.innerHTML = "";
+      for (let c = 0; c < COLS; c++) {
+        const colBtn = document.createElement("button");
+        colBtn.className = "col-btn";
+        colBtn.disabled = gameOver || grid[0][c] !== null || (mode === "ai" && !redTurn);
+        for (let r = 0; r < ROWS; r++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          const v = grid[r][c];
+          if (v === "R") cell.classList.add("r");
+          else if (v === "Y") cell.classList.add("y");
+          if (winCells.some(([wr,wc]) => wr === r && wc === c)) cell.classList.add("win");
+          colBtn.appendChild(cell);
+        }
+        colBtn.addEventListener("click", () => playCol(c));
+        colsEl.appendChild(colBtn);
+      }
+    }
+
+    function playCol(c) {
+      if (gameOver) return;
+      if (mode === "ai" && !redTurn) return;
+      const piece = redTurn ? "R" : "Y";
+      const r = dropInCol(grid, c, piece);
+      if (r < 0) return;
+      const win = checkWin(grid, r, c, piece);
+      redTurn = !redTurn;
+      if (win) {
+        gameOver = true;
+        winCells = win;
+        render();
+        if (mode === "ai") {
+          statusEl.textContent = piece === "R" ? t("you_win") : t("you_lose");
+          statusEl.className = piece === "R" ? "status red" : "status yellow";
+        } else {
+          statusEl.textContent = piece === "R" ? t("red_wins") : t("yellow_wins");
+          statusEl.className = piece === "R" ? "status red" : "status yellow";
+        }
+        return;
+      }
+      if (isFull()) {
+        gameOver = true;
+        render();
+        statusEl.textContent = t("draw");
+        statusEl.className = "status draw";
+        return;
+      }
+      render();
+      updateStatus();
+      if (mode === "ai" && !redTurn && !gameOver) {
+        setTimeout(aiMove, 400);
+      }
+    }
+
+    // Simple AI: 1) win if possible, 2) block if needed, 3) prefer center
+    function findWinningMove(g, piece) {
+      for (let c = 0; c < COLS; c++) {
+        const tmp = g.map(row => row.slice());
+        const r = dropInCol(tmp, c, piece);
+        if (r < 0) continue;
+        if (checkWin(tmp, r, c, piece)) return c;
+      }
+      return -1;
+    }
+    function aiMove() {
+      // 1. try to win
+      let pick = findWinningMove(grid, "Y");
+      // 2. block opponent
+      if (pick < 0) pick = findWinningMove(grid, "R");
+      // 3. prefer center, then random valid
+      if (pick < 0) {
+        const order = [3,2,4,1,5,0,6];
+        for (const c of order) {
+          if (grid[0][c] === null) { pick = c; break; }
+        }
+      }
+      if (pick >= 0) playCol(pick);
+    }
+
+    function reset() {
+      grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+      redTurn = true;
+      gameOver = false;
+      winCells = [];
+      render();
+      updateStatus();
+    }
+
+    document.getElementById("reset").addEventListener("click", reset);
+    document.querySelectorAll(".mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        mode = btn.dataset.mode;
+        document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b === btn));
+        reset();
+      });
+    });
+
+    const sel = document.getElementById("lang-select");
+    sel.value = lang;
+    sel.addEventListener("change", (e) => {
+      lang = e.target.value;
+      localStorage.setItem(STORAGE, lang);
+      applyLang();
+    });
+
+    applyLang();
+    render();
+  </script>
+</body>
+</html>

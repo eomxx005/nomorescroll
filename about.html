@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f2027">
+  <title>For parents — nomorescroll</title>
+  <meta name="description" content="Our promise: no ads (currently), no sign-up, no tracking.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg-1:#0f2027; --bg-2:#203a43; --bg-3:#2c5364; --accent:#ffc107; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter','Apple SD Gothic Neo','Pretendard','PingFang SC','Hiragino Sans','Malgun Gothic',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+      background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 32px 20px 80px;
+      line-height: 1.7;
+    }
+    .top-bar {
+      max-width: 680px; margin: 0 auto 24px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .back {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .back:hover { color: var(--accent); }
+    .lang-select {
+      appearance: none;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 8px 32px 8px 12px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    main { max-width: 680px; margin: 0 auto; }
+    h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; }
+    .lead { font-size: 1.1rem; color: rgba(255,255,255,0.75); margin-bottom: 40px; }
+    h2 { font-size: 1.3rem; font-weight: 700; margin: 40px 0 16px; color: var(--accent); }
+    p { margin-bottom: 16px; color: rgba(255,255,255,0.85); }
+    ul { list-style: none; padding: 0; }
+    ul li {
+      padding: 12px 0 12px 28px;
+      position: relative;
+      color: rgba(255,255,255,0.85);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    ul li::before {
+      content: "✓";
+      position: absolute; left: 0; top: 12px;
+      color: var(--accent); font-weight: 800;
+    }
+    ul li:last-child { border-bottom: none; }
+    .closing {
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6);
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="index.html" class="back" data-i18n="back">← Back to games</a>
+    <select class="lang-select" id="lang-select" aria-label="Language">
+      <option value="en">English</option>
+      <option value="ko">한국어</option>
+      <option value="zh">中文</option>
+      <option value="ja">日本語</option>
+    </select>
+  </div>
+
+  <main>
+    <h1 data-i18n="title">For parents</h1>
+    <p class="lead" data-i18n="lead">A place where children aged 5-10 can play a calm board game, then go back to their day.</p>
+
+    <h2 data-i18n="h_promise">Our current promise</h2>
+    <ul>
+      <li data-i18n="p_ads">No ads right now. If we ever add them later, only quiet, non-tracking ones — and we'll say so up front.</li>
+      <li data-i18n="p_signup">No sign-up. We don't ask for email, phone, or any personal info.</li>
+      <li data-i18n="p_tracking">No analytics, no tracking. Not even Google Analytics.</li>
+      <li data-i18n="p_algo">No recommendation algorithm. The 8 games on the home page are all there is.</li>
+      <li data-i18n="p_autoplay">No autoplay videos.</li>
+      <li data-i18n="p_infinite">No infinite scroll.</li>
+      <li data-i18n="p_dark">No design tricks to keep your child on screen longer.</li>
+    </ul>
+
+    <h2 data-i18n="h_games">The 8 games</h2>
+    <p data-i18n="games_desc">Tic-Tac-Toe, Nim, Connect Four, Gomoku, Chess, Reversi, Go, and a Korean-only Baduk learning game. All centuries-old board games. A round takes 1 to 20 minutes — then it's done.</p>
+
+    <h2 data-i18n="h_why">Why this exists</h2>
+    <p data-i18n="why_p1">We didn't want our kids stuck in the infinite-scroll loop. But cutting screens out completely isn't realistic either. So we collected the kind of games that ask you to <em>think one move at a time</em>, in one quiet place.</p>
+
+    <h2 data-i18n="h_gate">Why the parent gate?</h2>
+    <p data-i18n="gate_p1">A two-digit addition (e.g. 17 + 28) sits in front of every game. Kids 5-10 generally can't solve it; parents can. It's a small bit of friction so a child can't open a game without you knowing.</p>
+    <p data-i18n="gate_p2">If your child can solve it, just solve it together. There's no time limit, and one solve doesn't unlock a 5-minute or 1-hour free pass — every entry asks once.</p>
+
+    <h2 data-i18n="h_cost">Cost</h2>
+    <p data-i18n="cost_p1">Free. Right now there are no ads and no paid features. If running costs grow, we may add light, non-tracking ads later, and we'll be honest about it on this page.</p>
+
+    <h2 data-i18n="h_offline">Offline</h2>
+    <p data-i18n="offline_p1">Each game keeps working once it's loaded, even if the internet drops. Useful in a car, on a plane, or just on patchy Wi-Fi.</p>
+
+    <p class="closing" data-i18n="closing">Questions or suggestions are welcome.</p>
+  </main>
+
+  <script>
+    const I18N = {
+      en: {
+        back: "← Back to games",
+        title: "For parents",
+        lead: "A place where children aged 5-10 can play a calm board game, then go back to their day.",
+        h_promise: "Our current promise",
+        p_ads: "No ads right now. If we ever add them later, only quiet, non-tracking ones — and we'll say so up front.",
+        p_signup: "No sign-up. We don't ask for email, phone, or any personal info.",
+        p_tracking: "No analytics, no tracking. Not even Google Analytics.",
+        p_algo: "No recommendation algorithm. The 8 games on the home page are all there is.",
+        p_autoplay: "No autoplay videos.",
+        p_infinite: "No infinite scroll.",
+        p_dark: "No design tricks to keep your child on screen longer.",
+        h_games: "The 8 games",
+        games_desc: "Tic-Tac-Toe, Nim, Connect Four, Gomoku, Chess, Reversi, Go, and a Korean-only Baduk learning game. All centuries-old board games. A round takes 1 to 20 minutes — then it's done.",
+        h_why: "Why this exists",
+        why_p1: "We didn't want our kids stuck in the infinite-scroll loop. But cutting screens out completely isn't realistic either. So we collected the kind of games that ask you to <em>think one move at a time</em>, in one quiet place.",
+        h_gate: "Why the parent gate?",
+        gate_p1: "A two-digit addition (e.g. 17 + 28) sits in front of every game. Kids 5-10 generally can't solve it; parents can. It's a small bit of friction so a child can't open a game without you knowing.",
+        gate_p2: "If your child can solve it, just solve it together. There's no time limit, and one solve doesn't unlock a 5-minute or 1-hour free pass — every entry asks once.",
+        h_cost: "Cost",
+        cost_p1: "Free. Right now there are no ads and no paid features. If running costs grow, we may add light, non-tracking ads later, and we'll be honest about it on this page.",
+        h_offline: "Offline",
+        offline_p1: "Each game keeps working once it's loaded, even if the internet drops. Useful in a car, on a plane, or just on patchy Wi-Fi.",
+        closing: "Questions or suggestions are welcome.",
+      },
+      ko: {
+        back: "← 게임 목록으로",
+        title: "부모님께",
+        lead: "5-10세 아이가 차분히 한 판 두고, 다시 일상으로 돌아갈 수 있는 곳입니다.",
+        h_promise: "현재 약속",
+        p_ads: "지금은 광고가 없습니다. 나중에 도입한다면 추적하지 않는 조용한 광고로 한정하고, 이 페이지에 먼저 알리겠습니다.",
+        p_signup: "회원가입을 받지 않습니다. 이메일·전화번호·어떤 정보도 묻지 않습니다.",
+        p_tracking: "방문자 추적·분석 없음 (구글 애널리틱스도 없음).",
+        p_algo: "추천 알고리즘 없음. 홈에 보이는 8개 게임이 전부입니다.",
+        p_autoplay: "자동 재생 영상 없음.",
+        p_infinite: "무한 스크롤 없음.",
+        p_dark: "아이를 화면에 더 오래 붙잡으려는 디자인 장치 없음.",
+        h_games: "8개 게임",
+        games_desc: "삼목, 님 게임, 커넥트 포, 오목, 체스, 리버시, 바둑, 그리고 한국어 전용 바둑 교실. 모두 수백 년 된 보드게임이고, 한 판이 1분에서 20분이면 끝납니다.",
+        h_why: "왜 만들었나요",
+        why_p1: "아이가 무한 스크롤에 빠지는 게 싫었지만, 화면을 완전히 끊는 것도 비현실적이었어요. 그래서 <em>한 수씩 생각하게 하는</em> 게임만 한 곳에 모았습니다.",
+        h_gate: "왜 부모 게이트가 있어요?",
+        gate_p1: "게임 앞에 두 자리 + 두 자리 덧셈이 있습니다. 5-10세는 풀기 어렵고 부모는 쉽게 풀어요. 아이가 부모 모르게 들어가지 못하도록 하는 작은 마찰입니다.",
+        gate_p2: "아이가 풀 수 있다면 같이 풀어주세요. 시간 제한이 없고, 한 번 풀어도 5분이나 1시간 자유시간이 풀리지 않습니다 — 매번 게임 시작 시 한 번씩 풀면 됩니다.",
+        h_cost: "비용",
+        cost_p1: "무료. 지금은 광고도, 유료 기능도 없습니다. 운영비가 커지면 추적 없는 가벼운 광고를 도입할 수 있고, 이 페이지에서 먼저 정직하게 알리겠습니다.",
+        h_offline: "오프라인",
+        offline_p1: "한 번 열고 나면 인터넷이 끊겨도 게임이 동작합니다. 차 안, 비행기, 약한 와이파이에서 유용해요.",
+        closing: "문의나 제안은 언제든 환영합니다.",
+      },
+      zh: {
+        back: "← 返回游戏列表",
+        title: "致家长",
+        lead: "一个让5-10岁孩子安静地下一局棋,然后回到日常的地方。",
+        h_promise: "当前承诺",
+        p_ads: "目前无广告。若日后加入,只会是安静、不追踪的广告,并会在此页提前说明。",
+        p_signup: "无需注册。我们不询问邮箱、电话或任何个人信息。",
+        p_tracking: "不收集数据,不追踪。连Google Analytics都没有。",
+        p_algo: "没有推荐算法。首页的8款游戏就是全部。",
+        p_autoplay: "没有自动播放视频。",
+        p_infinite: "没有无限滚动。",
+        p_dark: "没有让孩子停留更久的设计套路。",
+        h_games: "8款游戏",
+        games_desc: "井字棋、尼姆、四子棋、五子棋、国际象棋、黑白棋、围棋,以及一个韩语围棋教学。全是流传数百年的棋盘游戏,一局1到20分钟。",
+        h_why: "为什么做这个",
+        why_p1: "我们不希望孩子陷入无限滚动,但完全戒掉屏幕也不现实。于是把<em>需要一步一步思考</em>的游戏收集到一个安静的地方。",
+        h_gate: "为什么有家长门?",
+        gate_p1: "每款游戏前有一道两位数加法(如17+28)。5-10岁的孩子通常解不出,家长能轻松解。这是一道小阻力,让孩子无法在你不知情的情况下进入游戏。",
+        gate_p2: "如果孩子能解,就一起解吧。没有时间限制,解一次也不会换来5分钟或1小时的自由通行 — 每次进入都问一次。",
+        h_cost: "费用",
+        cost_p1: "免费。目前无广告无付费功能。运营成本上升时可能加入不追踪的轻量广告,会在此页诚实告知。",
+        h_offline: "离线",
+        offline_p1: "每款游戏加载后即使断网也能继续玩。适合车上、飞机、信号不好的地方。",
+        closing: "欢迎提问与建议。",
+      },
+      ja: {
+        back: "← ゲーム一覧へ",
+        title: "保護者の方へ",
+        lead: "5〜10歳のお子さんが静かに一局を楽しみ、日常に戻れる場所です。",
+        h_promise: "現在のお約束",
+        p_ads: "現時点で広告はありません。将来追加する場合も、追跡しない静かな広告に限定し、このページで事前にお知らせします。",
+        p_signup: "登録不要。メール・電話番号・個人情報は一切お聞きしません。",
+        p_tracking: "アクセス解析・追跡なし(Google Analyticsもありません)。",
+        p_algo: "レコメンドアルゴリズムなし。ホームの8ゲームがすべてです。",
+        p_autoplay: "自動再生動画なし。",
+        p_infinite: "無限スクロールなし。",
+        p_dark: "お子さんを画面に長く留める仕掛けはありません。",
+        h_games: "8つのゲーム",
+        games_desc: "三目並べ、ニム、コネクトフォー、五目並べ、チェス、リバーシ、囲碁、そして韓国語のみの囲碁教室。すべて数百年の歴史を持つボードゲームで、1〜20分で1局が終わります。",
+        h_why: "なぜ作ったか",
+        why_p1: "子どもが無限スクロールにはまるのは嫌だったけれど、画面を完全に断つのも現実的ではありません。そこで<em>一手ずつ考える</em>タイプのゲームだけを静かな場所に集めました。",
+        h_gate: "なぜ保護者ゲートがあるの?",
+        gate_p1: "各ゲームの前に二桁+二桁の足し算があります(例:17+28)。5〜10歳には難しく、保護者には簡単です。お子さんが内緒で入れないようにする、ちょっとした手間です。",
+        gate_p2: "お子さんが解けるなら一緒に解いてください。時間制限はなく、一度解いても5分や1時間の自由通行が得られるわけではありません — 毎回1問だけです。",
+        h_cost: "費用",
+        cost_p1: "無料。現在広告も有料機能もありません。運営費が増えれば追跡しない軽い広告を入れる可能性があり、その際はこのページで正直にお知らせします。",
+        h_offline: "オフライン",
+        offline_p1: "各ゲームは一度読み込めば、ネットが切れても動きます。車内・機内・電波の弱い場所で便利です。",
+        closing: "ご質問・ご提案はいつでも歓迎します。",
+      },
+    };
+
+    const STORAGE_KEY = "nomorescroll-lang";
+    const SUPPORTED = ["en", "ko", "zh", "ja"];
+
+    function detectLang() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && SUPPORTED.includes(saved)) return saved;
+      return "en";
+    }
+
+    function applyLang(lang) {
+      const dict = I18N[lang] || I18N.en;
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const v = dict[el.dataset.i18n];
+        if (typeof v === "string") el.innerHTML = v;
+      });
+      localStorage.setItem(STORAGE_KEY, lang);
+    }
+
+    const sel = document.getElementById("lang-select");
+    sel.value = detectLang();
+    applyLang(sel.value);
+    sel.addEventListener("change", (e) => applyLang(e.target.value));
+  </script>
+</body>
+</html>

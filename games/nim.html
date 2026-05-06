@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nim Game — 님 게임 — 尼姆游戏</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green:#4caf50; --orange:#ff9800; --red:#f44336;
+            --blue:#2196f3; --purple:#9c27b0; --gold:#ffc107;
+        }
+
+        body {
+            font-family: 'Segoe UI','Helvetica Neue',Arial,
+                         'Apple SD Gothic Neo','Malgun Gothic',
+                         'PingFang SC','Microsoft YaHei',
+                         'Hiragino Sans','Meiryo', sans-serif;
+            background: linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        /* ── screens ── */
+        .screen { display:none; }
+        .screen.active { display:flex; flex-direction:column; align-items:center; }
+
+        /* ── language flag button (persistent) ── */
+        #lang-btn {
+            position: fixed;
+            top: 14px; right: 16px;
+            z-index: 400;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            border-radius: 50px;
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: background 0.2s;
+            display: none;
+        }
+        #lang-btn:hover { background: rgba(255,255,255,0.25); }
+
+        /* ── Volume control ── */
+        #vol-ctrl {
+            position: fixed;
+            top: 14px; left: 16px;
+            z-index: 400;
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        #vol-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            border-radius: 50px;
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        #vol-btn:hover { background: rgba(255,255,255,0.25); }
+
+        #vol-panel {
+            display: none;
+            background: rgba(15,25,45,0.92);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 16px;
+            padding: 14px 16px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+            width: 200px;
+            flex-direction: column;
+            gap: 12px;
+        }
+        #vol-panel.show { display: flex; }
+
+        .vol-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #mute-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            line-height: 1;
+        }
+        #mute-btn:hover { background: rgba(255,255,255,0.22); }
+        #mute-btn.muted { background: rgba(244,67,54,0.25); border-color: rgba(244,67,54,0.5); }
+
+        #vol-pct-disp {
+            color: var(--gold);
+            font-size: 0.82rem;
+            font-weight: 700;
+            min-width: 34px;
+            text-align: right;
+        }
+
+        #vol-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            background: linear-gradient(to right, var(--gold) 0%, var(--gold) 70%, rgba(255,255,255,0.2) 70%);
+        }
+        #vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--gold);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        #vol-slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
+        #vol-slider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%; border: none;
+            background: var(--gold);
+            cursor: pointer;
+        }
+
+        /* ══════════════════════════
+           LANGUAGE SELECT SCREEN
+        ══════════════════════════ */
+        #lang-screen {
+            text-align: center;
+            color: white;
+            gap: 0;
+        }
+
+        .lang-title {
+            font-size: clamp(2rem,6vw,3.2rem);
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg,#fff 30%,#ffd54f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .lang-sub {
+            font-size: 1rem;
+            opacity: 0.7;
+            margin-bottom: 38px;
+        }
+
+        .lang-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: center;
+        }
+
+        .lang-card {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 22px 28px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s, border-color 0.2s;
+            min-width: 140px;
+            text-align: center;
+        }
+        .lang-card:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: var(--gold);
+            transform: translateY(-5px) scale(1.04);
+        }
+        .lang-flag  { font-size: 3rem; margin-bottom: 8px; }
+        .lang-name  { font-size: 1.1rem; font-weight: 800; color: white; }
+        .lang-native{ font-size: 0.85rem; color: rgba(255,255,255,0.65); margin-top: 4px; }
+
+        /* ══════════════════════════
+           INTRO SCREEN
+        ══════════════════════════ */
+        #intro-screen { text-align:center; color:white; max-width:720px; width:100%; gap:0; }
+
+        .splash-badge {
+            display:inline-block;
+            background:rgba(255,215,0,0.15);
+            border:2px solid var(--gold);
+            border-radius:50px;
+            padding:6px 18px;
+            font-size:0.82rem;
+            color:var(--gold);
+            letter-spacing:2px;
+            text-transform:uppercase;
+            margin-bottom:16px;
+        }
+        .splash-title {
+            font-size: clamp(2.2rem,6vw,3.8rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg,#fff 30%,#ffd54f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .splash-sub { font-size:1rem; opacity:0.75; margin-bottom:34px; }
+
+        .rule-cards {
+            display:grid;
+            grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+            gap:14px;
+            margin-bottom:36px;
+            width:100%;
+        }
+        .rule-card {
+            background:rgba(255,255,255,0.08);
+            border:1px solid rgba(255,255,255,0.15);
+            border-radius:18px;
+            padding:20px 16px;
+            text-align:center;
+            backdrop-filter:blur(6px);
+        }
+        .rule-icon  { font-size:2.4rem; margin-bottom:8px; }
+        .rule-title { font-size:0.95rem; font-weight:700; color:var(--gold); margin-bottom:6px; }
+        .rule-text  { font-size:0.8rem; opacity:0.8; line-height:1.5; }
+
+        .btn-play-now {
+            display:inline-flex; align-items:center; gap:10px;
+            background:linear-gradient(135deg,#f9a825,#f57f17);
+            color:white; border:none; border-radius:50px;
+            padding:16px 40px; font-size:1.2rem; font-weight:800;
+            cursor:pointer; box-shadow:0 6px 24px rgba(245,127,23,0.5);
+            transition:transform 0.15s,box-shadow 0.15s; letter-spacing:0.5px;
+        }
+        .btn-play-now:hover { transform:translateY(-3px) scale(1.03); box-shadow:0 10px 32px rgba(245,127,23,0.65); }
+
+        /* ══════════════════════════
+           LEVEL SELECT
+        ══════════════════════════ */
+        #level-screen { text-align:center; color:white; gap:0; }
+        .level-title  { font-size:clamp(1.8rem,5vw,2.6rem); font-weight:900; margin-bottom:8px; color:white; }
+        .level-subtitle { font-size:1rem; opacity:0.7; margin-bottom:36px; }
+
+        .level-cards { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:28px; }
+
+        .lv-card {
+            background:white; border-radius:24px; padding:26px 28px;
+            cursor:pointer; transition:transform 0.2s,box-shadow 0.2s;
+            box-shadow:0 8px 32px rgba(0,0,0,0.4); min-width:155px;
+            border:3px solid transparent; text-align:center;
+            position:relative; overflow:hidden;
+        }
+        .lv-card::before { content:''; position:absolute; top:0;left:0;right:0; height:5px; }
+        .lv-card.easy::before { background:var(--green); }
+        .lv-card.mid::before  { background:var(--orange); }
+        .lv-card.hard::before { background:var(--red); }
+        .lv-card:hover { transform:translateY(-8px) scale(1.04); box-shadow:0 18px 50px rgba(0,0,0,0.5); }
+        .lv-card.easy:hover { border-color:var(--green); }
+        .lv-card.mid:hover  { border-color:var(--orange); }
+        .lv-card.hard:hover { border-color:var(--red); }
+
+        .lv-emoji { font-size:3rem; margin-bottom:8px; }
+        .lv-name  { font-size:1.4rem; font-weight:800; color:#222; }
+        .lv-who   { font-size:0.8rem; color:#777; margin:6px 0 10px; line-height:1.4; }
+        .lv-badge { display:inline-block; padding:3px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; color:white; }
+        .easy .lv-badge { background:var(--green); }
+        .mid  .lv-badge { background:var(--orange); }
+        .hard .lv-badge { background:var(--red); }
+
+        .btn-back-small {
+            background:transparent; border:1px solid rgba(255,255,255,0.3);
+            color:rgba(255,255,255,0.7); border-radius:50px;
+            padding:8px 20px; cursor:pointer; font-size:0.9rem; transition:all 0.2s;
+        }
+        .btn-back-small:hover { background:rgba(255,255,255,0.1); color:white; }
+
+        /* ══════════════════════════
+           GAME SCREEN
+        ══════════════════════════ */
+        #game-screen { gap:12px; }
+
+        .turn-bar {
+            background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2);
+            border-radius:50px; padding:8px 22px; color:white;
+            font-size:1rem; font-weight:700; display:flex; align-items:center; gap:10px;
+            backdrop-filter:blur(8px);
+        }
+        .turn-dot { width:18px; height:18px; border-radius:50%; transition:background 0.3s; }
+        .turn-dot.you  { background:radial-gradient(circle at 35% 35%,#f9a825,#f57f17); box-shadow:0 0 8px rgba(249,168,37,0.5); }
+        .turn-dot.cpu  { background:radial-gradient(circle at 35% 35%,#90caf9,#1565c0); box-shadow:0 0 8px rgba(33,150,243,0.5); }
+
+        .game-row { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+
+        .board-wrapper {
+            background:#1a0d00; border-radius:14px; padding:12px;
+            box-shadow:0 10px 40px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        canvas { display:block; border-radius:6px; cursor:pointer; max-width:100%; touch-action:none; }
+
+        .side-panel {
+            background:rgba(255,255,255,0.97); border-radius:20px; padding:16px;
+            width:215px; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+            display:flex; flex-direction:column; gap:9px;
+        }
+        .panel-title { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#aaa; }
+
+        .pile-row {
+            display:flex; align-items:center; gap:8px; padding:6px 0;
+        }
+        .pile-label { font-size:0.8rem; font-weight:700; color:#555; min-width:48px; }
+        .pile-bar-wrap { flex:1; background:#eee; border-radius:6px; height:10px; overflow:hidden; }
+        .pile-bar { height:100%; background:linear-gradient(90deg,#f9a825,#f57f17); border-radius:6px; transition:width 0.3s; }
+        .pile-count { font-size:0.82rem; font-weight:800; color:#222; min-width:18px; text-align:right; }
+
+        .divider { border:none; border-top:1px solid #ececec; margin:2px 0; }
+
+        #msg-box {
+            background:#fffde7; border-left:4px solid var(--gold); border-radius:0 12px 12px 0;
+            padding:10px 12px; font-size:0.86rem; font-weight:600; color:#4a3800;
+            min-height:52px; display:flex; align-items:center; line-height:1.45;
+        }
+
+        .btn {
+            display:flex; align-items:center; justify-content:center; gap:6px;
+            width:100%; padding:10px; border:none; border-radius:12px;
+            font-size:0.88rem; font-weight:700; cursor:pointer;
+            transition:filter 0.15s,transform 0.1s;
+        }
+        .btn:hover  { filter:brightness(1.1); transform:translateY(-1px); }
+        .btn:active { transform:translateY(1px); }
+        .btn-hint  { background:var(--blue);   color:white; }
+        .btn-back  { background:#78909c;        color:white; font-size:0.8rem; padding:8px; }
+
+        /* ── Modals ── */
+        .overlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.72); z-index:300;
+            align-items:center; justify-content:center; padding:16px;
+        }
+        .overlay.show { display:flex; }
+        .modal-box {
+            background:white; border-radius:24px; padding:30px 26px;
+            max-width:480px; width:100%;
+            box-shadow:0 24px 72px rgba(0,0,0,0.6);
+            animation:pop 0.28s cubic-bezier(.34,1.56,.64,1);
+            max-height:90vh; overflow-y:auto;
+        }
+        @keyframes pop {
+            from { transform:scale(0.7); opacity:0; }
+            to   { transform:scale(1);   opacity:1; }
+        }
+
+        /* Language modal */
+        #lang-modal .modal-box { text-align:center; }
+        .lang-modal-title { font-size:1.5rem; font-weight:800; color:#222; margin-bottom:18px; }
+        .lang-modal-grid  { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+        .lang-opt {
+            background:#f5f5f5; border:2px solid #eee; border-radius:14px;
+            padding:12px 16px; cursor:pointer; text-align:center; min-width:110px;
+            transition:all 0.2s; font-size:0.9rem; font-weight:700; color:#333;
+        }
+        .lang-opt:hover { border-color:var(--gold); background:#fff8e1; }
+        .lang-opt.selected { border-color:var(--green); background:#f1fdf4; color:#1b5e20; }
+        .lang-opt .lf { font-size:1.8rem; display:block; margin-bottom:4px; }
+
+        /* Rules modal */
+        #rules-modal .modal-box { text-align:left; }
+        .rules-title { font-size:1.5rem; font-weight:800; color:#222; margin-bottom:4px; }
+        .rules-sub   { font-size:0.85rem; color:#888; margin-bottom:18px; }
+        .rule-row    { display:flex; gap:12px; align-items:flex-start; margin-bottom:14px; }
+        .rule-num {
+            width:28px; height:28px; min-width:28px; border-radius:50%;
+            background:linear-gradient(135deg,#f9a825,#f57f17);
+            color:white; font-weight:800; display:flex; align-items:center; justify-content:center; font-size:0.85rem;
+        }
+        .rule-body strong { font-size:0.92rem; color:#222; display:block; margin-bottom:3px; }
+        .rule-body p      { font-size:0.8rem; color:#555; line-height:1.5; }
+        .btn-close-rules {
+            background:var(--green); color:white; margin-top:18px; padding:12px;
+            border-radius:12px; font-size:0.95rem; font-weight:700;
+            border:none; cursor:pointer; width:100%;
+        }
+
+        /* Result modal */
+        #result-modal .modal-box { text-align:center; }
+        .res-emoji  { font-size:4rem; margin-bottom:8px; }
+        .res-title  { font-size:1.9rem; font-weight:900; color:#222; margin-bottom:6px; }
+        .res-msg    { font-size:0.95rem; color:#555; margin-bottom:22px; }
+        .modal-btns { display:flex; gap:10px; flex-direction:column; }
+        .btn-replay { background:var(--green); color:white; padding:12px; border-radius:12px; font-size:0.95rem; font-weight:700; border:none; cursor:pointer; }
+        .btn-level  { background:#607d8b;      color:white; padding:12px; border-radius:12px; font-size:0.95rem; font-weight:700; border:none; cursor:pointer; }
+
+        /* ── Particles ── */
+        #pcvs { position:fixed; inset:0; pointer-events:none; z-index:250; }
+
+        /* ── Spinner ── */
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .spinner {
+            display:inline-block; width:13px; height:13px;
+            border:2px solid rgba(255,152,0,0.3); border-top-color:#ff9800;
+            border-radius:50%; animation:spin 0.8s linear infinite;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width:600px) {
+            .side-panel { width:100%; max-width:380px; }
+            .game-row   { flex-direction:column; align-items:center; }
+            .rule-cards { grid-template-columns:1fr 1fr; }
+            .lang-grid  { gap:10px; }
+            .lang-card  { min-width:120px; padding:18px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- persistent language button -->
+<button id="lang-btn" onclick="openLangModal()">🌐 Language</button>
+
+<!-- Volume control -->
+<div id="vol-ctrl">
+    <button id="vol-btn" onclick="toggleVolPanel()">
+        <span id="vol-icon-btn">🔊</span>
+        <span id="vol-pct-btn">70%</span>
+    </button>
+    <div id="vol-panel">
+        <div class="vol-row">
+            <button id="mute-btn" onclick="toggleMute()" title="Mute / Unmute">🔊</button>
+            <input type="range" id="vol-slider" min="0" max="100" value="70"
+                   oninput="onSliderInput(this.value)">
+            <span id="vol-pct-disp">70%</span>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ LANGUAGE SELECT (first screen) ═══════ -->
+<div id="lang-screen" class="screen active">
+    <div class="lang-title">🔥 Nim Game</div>
+    <div class="lang-sub">Choose your language • 언어 선택 • 选择语言 • 言語を選ぶ • Elige idioma</div>
+    <div class="lang-grid">
+        <div class="lang-card" onclick="setLang('en')">
+            <div class="lang-flag">🇺🇸</div>
+            <div class="lang-name">English</div>
+            <div class="lang-native">English</div>
+        </div>
+        <div class="lang-card" onclick="setLang('ko')">
+            <div class="lang-flag">🇰🇷</div>
+            <div class="lang-name">한국어</div>
+            <div class="lang-native">Korean</div>
+        </div>
+        <div class="lang-card" onclick="setLang('zh')">
+            <div class="lang-flag">🇨🇳</div>
+            <div class="lang-name">中文</div>
+            <div class="lang-native">Chinese</div>
+        </div>
+        <div class="lang-card" onclick="setLang('ja')">
+            <div class="lang-flag">🇯🇵</div>
+            <div class="lang-name">日本語</div>
+            <div class="lang-native">Japanese</div>
+        </div>
+        <div class="lang-card" onclick="setLang('es')">
+            <div class="lang-flag">🇪🇸</div>
+            <div class="lang-name">Español</div>
+            <div class="lang-native">Spanish</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ INTRO SCREEN ═══════ -->
+<div id="intro-screen" class="screen">
+    <div class="splash-badge" id="i-badge">✨ Classic Strategy Game</div>
+    <div class="splash-title" id="i-title">Nim 🔥</div>
+    <div class="splash-sub"   id="i-sub">Master the ancient game of matches!</div>
+
+    <div class="rule-cards">
+        <div class="rule-card">
+            <div class="rule-icon">🔥</div>
+            <div class="rule-title" id="r1-t">Take Matches</div>
+            <div class="rule-text"  id="r1-d">Take 1 or more matches from any single row on your turn.</div>
+        </div>
+        <div class="rule-card">
+            <div class="rule-icon">🎯</div>
+            <div class="rule-title" id="r2-t">Last One Wins</div>
+            <div class="rule-text"  id="r2-d">The player who takes the very last match wins!</div>
+        </div>
+        <div class="rule-card">
+            <div class="rule-icon">🧠</div>
+            <div class="rule-title" id="r3-t">Think Ahead</div>
+            <div class="rule-text"  id="r3-d">Plan carefully — there is a perfect mathematical strategy!</div>
+        </div>
+        <div class="rule-card">
+            <div class="rule-icon">💡</div>
+            <div class="rule-title" id="r4-t">XOR Secret</div>
+            <div class="rule-text"  id="r4-d">XOR all pile sizes. If the result is 0, you are in trouble!</div>
+        </div>
+    </div>
+
+    <button class="btn-play-now" id="i-btn" onclick="showLevelScreen()">Let's Play! 🚀</button>
+</div>
+
+<!-- ═══════ LEVEL SCREEN ═══════ -->
+<div id="level-screen" class="screen">
+    <div class="level-title"    id="lv-title">🎮 Choose Your Level</div>
+    <div class="level-subtitle" id="lv-sub">Pick a challenge that matches your skill!</div>
+
+    <div class="level-cards">
+        <div class="lv-card easy" onclick="startGame(1)">
+            <div class="lv-emoji">🐣</div>
+            <div class="lv-name" id="lv1-name">Beginner</div>
+            <div class="lv-who"  id="lv1-desc">Piles: 3, 4, 5<br>Random AI</div>
+            <span class="lv-badge" id="lv1-badge">Easy</span>
+        </div>
+        <div class="lv-card mid" onclick="startGame(2)">
+            <div class="lv-emoji">🐥</div>
+            <div class="lv-name" id="lv2-name">Explorer</div>
+            <div class="lv-who"  id="lv2-desc">Piles: 3, 5, 7<br>Mixed AI</div>
+            <span class="lv-badge" id="lv2-badge">Medium</span>
+        </div>
+        <div class="lv-card hard" onclick="startGame(3)">
+            <div class="lv-emoji">🦅</div>
+            <div class="lv-name" id="lv3-name">Champion</div>
+            <div class="lv-who"  id="lv3-desc">Piles: 1, 3, 5, 7<br>Perfect AI</div>
+            <span class="lv-badge" id="lv3-badge">Hard</span>
+        </div>
+    </div>
+
+    <button class="btn-back-small" id="lv-back" onclick="showIntroScreen()">← Back</button>
+</div>
+
+<!-- ═══════ GAME SCREEN ═══════ -->
+<div id="game-screen" class="screen">
+    <div class="turn-bar">
+        <div class="turn-dot you" id="turn-dot"></div>
+        <span id="turn-text">Your Turn</span>
+    </div>
+
+    <div class="game-row">
+        <div class="board-wrapper">
+            <canvas id="board-canvas"></canvas>
+        </div>
+
+        <div class="side-panel">
+            <div class="panel-title" id="sp-title">Pile Status</div>
+            <div id="pile-status"></div>
+
+            <hr class="divider">
+            <div id="msg-box">Click a match to take it!</div>
+
+            <button class="btn btn-hint" id="btn-hint" onclick="showHint()" style="display:none;">
+                💡 <span id="btn-hint-lbl">Show Hint</span>
+            </button>
+            <button class="btn btn-back" id="btn-back" onclick="goToLevelScreen()">
+                ← <span id="btn-back-lbl">Level Select</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ LANGUAGE MODAL ═══════ -->
+<div id="lang-modal" class="overlay">
+    <div class="modal-box">
+        <div class="lang-modal-title" id="lm-title">🌐 Choose Language</div>
+        <div class="lang-modal-grid">
+            <div class="lang-opt" id="lo-en" onclick="setLang('en')"><span class="lf">🇺🇸</span>English</div>
+            <div class="lang-opt" id="lo-ko" onclick="setLang('ko')"><span class="lf">🇰🇷</span>한국어</div>
+            <div class="lang-opt" id="lo-zh" onclick="setLang('zh')"><span class="lf">🇨🇳</span>中文</div>
+            <div class="lang-opt" id="lo-ja" onclick="setLang('ja')"><span class="lf">🇯🇵</span>日本語</div>
+            <div class="lang-opt" id="lo-es" onclick="setLang('es')"><span class="lf">🇪🇸</span>Español</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ RULES MODAL ═══════ -->
+<div id="rules-modal" class="overlay">
+    <div class="modal-box">
+        <div class="rules-title" id="rm-title">📖 Nim Rules</div>
+        <div class="rules-sub"   id="rm-sub">How to play!</div>
+        <div class="rule-row"><div class="rule-num">1</div><div class="rule-body"><strong id="rm1-t">Take from one row</strong><p id="rm1-d">On your turn, take 1 or more matches from exactly one row.</p></div></div>
+        <div class="rule-row"><div class="rule-num">2</div><div class="rule-body"><strong id="rm2-t">Last match wins</strong><p id="rm2-d">The player who takes the very last match wins the game!</p></div></div>
+        <div class="rule-row"><div class="rule-num">3</div><div class="rule-body"><strong id="rm3-t">No skipping</strong><p id="rm3-d">You must take at least one match on your turn.</p></div></div>
+        <div class="rule-row"><div class="rule-num">4</div><div class="rule-body"><strong id="rm4-t">XOR strategy</strong><p id="rm4-d">XOR all pile sizes. A non-zero XOR means there is a winning move!</p></div></div>
+        <button class="btn-close-rules" id="rm-close" onclick="closeRules()">Got it! Let's play 🎉</button>
+    </div>
+</div>
+
+<!-- ═══════ RESULT MODAL ═══════ -->
+<div id="result-modal" class="overlay">
+    <div class="modal-box">
+        <div class="res-emoji" id="res-emoji">🏆</div>
+        <div class="res-title"  id="res-title">Game Over!</div>
+        <div class="res-msg"    id="res-msg"></div>
+        <div class="modal-btns">
+            <button class="btn-replay" id="res-replay" onclick="replayGame()">🔄 Play Again</button>
+            <button class="btn-level"  id="res-level"  onclick="fromResultToLevel()">🎮 Level Select</button>
+        </div>
+    </div>
+</div>
+
+<canvas id="pcvs"></canvas>
+
+<!-- ═══════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════ -->
+<script>
+/* ─────────────────────────────────
+   roundRect polyfill (Safari)
+───────────────────────────────── */
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (w < 2*r) r = w/2;
+        if (h < 2*r) r = h/2;
+        this.beginPath();
+        this.moveTo(x+r, y);
+        this.arcTo(x+w, y,   x+w, y+h, r);
+        this.arcTo(x+w, y+h, x,   y+h, r);
+        this.arcTo(x,   y+h, x,   y,   r);
+        this.arcTo(x,   y,   x+w, y,   r);
+        this.closePath();
+        return this;
+    };
+}
+
+/* ─────────────────────────────────
+   I18N Translations
+───────────────────────────────── */
+const T = {
+    en: {
+        langBtn: '🌐 Language',
+        lmTitle: '🌐 Choose Language',
+        badge: '✨ Classic Strategy Game',
+        title: 'Nim 🔥',
+        sub: 'Master the ancient game of matches!',
+        r1t: 'Take Matches',   r1d: 'Take 1 or more matches from any single row on your turn.',
+        r2t: 'Last One Wins',  r2d: 'The player who takes the very last match wins!',
+        r3t: 'Think Ahead',    r3d: 'Plan carefully — there is a perfect mathematical strategy!',
+        r4t: 'XOR Secret',     r4d: 'XOR all pile sizes. If the result is 0, you are in trouble!',
+        playBtn: "Let's Play! 🚀",
+        lvTitle: '🎮 Choose Your Level', lvSub: 'Pick a challenge that matches your skill!',
+        lv1Name: 'Beginner',  lv1Desc: 'Piles: 3, 4, 5<br>Random AI',     lv1Badge: 'Easy',
+        lv2Name: 'Explorer',  lv2Desc: 'Piles: 3, 5, 7<br>Mixed AI',       lv2Badge: 'Medium',
+        lv3Name: 'Champion',  lv3Desc: 'Piles: 1, 3, 5, 7<br>Perfect AI',  lv3Badge: 'Hard',
+        backBtn: '← Back',
+        rmTitle: '📖 Nim Rules', rmSub: 'How to play!',
+        rm1t: 'Take from one row',   rm1d: 'On your turn, take 1 or more matches from exactly one row.',
+        rm2t: 'Last match wins',     rm2d: 'The player who takes the very last match wins the game!',
+        rm3t: 'No skipping',         rm3d: 'You must take at least one match on your turn.',
+        rm4t: 'XOR strategy',        rm4d: 'XOR all pile sizes. A non-zero XOR means there is a winning move!',
+        rmClose: "Got it! Let's play 🎉",
+        spTitle: 'Pile Status',
+        msgStart: 'Hover over matches to select, then click to take them! 🔥',
+        msgYourTurn: ['Your turn — choose wisely! 🤔', 'Which row will you pick? 😊', 'Your move! 💪', 'Think carefully! ⭐'],
+        msgGood: ['Nice move! ✨', 'Well played! 👍', 'Great thinking! 🌟', 'Smart! 🧠'],
+        msgAI: ['Computer is thinking… 🤔', 'Planning my move… ⏳', 'Hmm… 🧐'],
+        msgIllegal: ['That pile is empty! 😅', 'No matches there! 🚫', 'Choose a non-empty row! ❌'],
+        msgThink: ['Computer is thinking… 🤔', 'Calculating… ⏳', 'Hmm… 🧐'],
+        winTitle: 'You Won! 🏆', winMsg: 'Amazing! You took the last match! 🌟',
+        loseTitle: 'Computer Won!', loseMsg: "Don't give up — every game makes you stronger! 💪",
+        hintBtn: '💡 Show Hint', backBtn2: '← Level Select', replayBtn: '🔄 Play Again', levelBtn: '🎮 Level Select',
+        lmTitle2: '🌐 Choose Language',
+        turnYou: 'Your Turn', turnCPU: "Computer's Turn",
+        rowLabel: 'Row',
+        hintMsg: 'Take {n} matches from {r}!', hintNone: "Tough spot — do your best!",
+    },
+
+    ko: {
+        langBtn: '🌐 언어',
+        lmTitle: '🌐 언어 선택',
+        badge: '✨ 고전 전략 게임',
+        title: '님 게임 🔥',
+        sub: '성냥 가져가기 게임을 마스터하세요!',
+        r1t: '성냥 가져가기',    r1d: '자신의 차례에 한 줄에서 1개 이상의 성냥을 가져가세요.',
+        r2t: '마지막이 이겨요',  r2d: '마지막 성냥을 가져간 사람이 이겨요!',
+        r3t: '미리 생각하기',    r3d: '신중하게 계획하세요 — 완벽한 수학 전략이 있어요!',
+        r4t: 'XOR 비밀',         r4d: '모든 더미의 XOR을 계산하세요. 결과가 0이면 불리해요!',
+        playBtn: '시작하기! 🚀',
+        lvTitle: '🎮 레벨 선택', lvSub: '나에게 맞는 도전을 골라보세요!',
+        lv1Name: '초보자',   lv1Desc: '더미: 3, 4, 5<br>랜덤 AI',        lv1Badge: '쉬움',
+        lv2Name: '탐험가',   lv2Desc: '더미: 3, 5, 7<br>혼합 AI',        lv2Badge: '보통',
+        lv3Name: '챔피언',   lv3Desc: '더미: 1, 3, 5, 7<br>완벽한 AI',   lv3Badge: '어려움',
+        backBtn: '← 돌아가기',
+        rmTitle: '📖 님 게임 규칙', rmSub: '게임 방법!',
+        rm1t: '한 줄에서 가져가기', rm1d: '자신의 차례에 정확히 한 줄에서 1개 이상의 성냥을 가져가세요.',
+        rm2t: '마지막 성냥이 승리', rm2d: '마지막 성냥을 가져간 플레이어가 게임에서 이겨요!',
+        rm3t: '건너뛰기 금지',      rm3d: '자신의 차례에 반드시 최소 1개의 성냥을 가져가야 해요.',
+        rm4t: 'XOR 전략',           rm4d: '모든 더미의 XOR을 계산하세요. 0이 아닌 XOR은 이길 수 있다는 뜻이에요!',
+        rmClose: '이해했어요! 시작! 🎉',
+        spTitle: '더미 현황',
+        msgStart: '성냥 위에 마우스를 올리고 클릭해서 가져가세요! 🔥',
+        msgYourTurn: ['내 차례 — 현명하게 선택하세요! 🤔', '어느 줄을 선택할까요? 😊', '내 차례예요! 💪', '신중하게 생각해요! ⭐'],
+        msgGood: ['좋은 수예요! ✨', '잘했어요! 👍', '훌륭해요! 🌟', '스마트! 🧠'],
+        msgAI: ['컴퓨터가 생각 중이에요… 🤔', '수를 계획 중이에요… ⏳', '음… 🧐'],
+        msgIllegal: ['그 더미는 비어 있어요! 😅', '거기에 성냥이 없어요! 🚫', '비어있지 않은 줄을 선택하세요! ❌'],
+        msgThink: ['컴퓨터가 생각 중이에요… 🤔', '계산 중이에요… ⏳', '음… 🧐'],
+        winTitle: '내가 이겼어요! 🏆', winMsg: '대단해요! 마지막 성냥을 가져갔어요! 🌟',
+        loseTitle: '컴퓨터가 이겼어요!', loseMsg: '포기하지 마세요 — 매 게임이 당신을 더 강하게 해요! 💪',
+        hintBtn: '💡 힌트 보기', backBtn2: '← 레벨 선택', replayBtn: '🔄 다시 하기', levelBtn: '🎮 레벨 선택',
+        lmTitle2: '🌐 언어 선택',
+        turnYou: '내 차례', turnCPU: '컴퓨터 차례',
+        rowLabel: '줄',
+        hintMsg: '{r}에서 {n}개 가져가세요!', hintNone: '어려운 상황이에요 — 최선을 다하세요!',
+    },
+
+    zh: {
+        langBtn: '🌐 语言',
+        lmTitle: '🌐 选择语言',
+        badge: '✨ 经典策略游戏',
+        title: '尼姆游戏 🔥',
+        sub: '掌握这个古老的火柴游戏！',
+        r1t: '取走火柴',       r1d: '在你的回合，从任意一行取走1根或更多火柴。',
+        r2t: '最后取走者获胜', r2d: '取走最后一根火柴的玩家获胜！',
+        r3t: '提前思考',       r3d: '仔细规划 — 有一个完美的数学策略！',
+        r4t: 'XOR秘诀',        r4d: '对所有堆的大小进行XOR运算。如果结果为0，你就有麻烦了！',
+        playBtn: '开始游戏！🚀',
+        lvTitle: '🎮 选择难度', lvSub: '选择适合你的挑战！',
+        lv1Name: '初学者', lv1Desc: '堆: 3, 4, 5<br>随机AI',      lv1Badge: '简单',
+        lv2Name: '探索者', lv2Desc: '堆: 3, 5, 7<br>混合AI',      lv2Badge: '中等',
+        lv3Name: '冠军',   lv3Desc: '堆: 1, 3, 5, 7<br>完美AI',   lv3Badge: '困难',
+        backBtn: '← 返回',
+        rmTitle: '📖 尼姆规则', rmSub: '游戏说明！',
+        rm1t: '从一行取走', rm1d: '在你的回合，从恰好一行取走1根或更多火柴。',
+        rm2t: '最后取走者获胜', rm2d: '取走最后一根火柴的玩家赢得游戏！',
+        rm3t: '不能跳过', rm3d: '在你的回合，你必须取走至少一根火柴。',
+        rm4t: 'XOR策略', rm4d: '对所有堆的大小进行XOR运算。非零的XOR意味着有必胜的一步！',
+        rmClose: '明白了！开始游戏 🎉',
+        spTitle: '堆状态',
+        msgStart: '将鼠标悬停在火柴上，然后点击取走它们！🔥',
+        msgYourTurn: ['你的回合 — 请明智地选择！🤔', '你会选择哪一行？😊', '你的行动！💪', '仔细思考！⭐'],
+        msgGood: ['好棋！✨', '下得不错！👍', '真厉害！🌟', '聪明！🧠'],
+        msgAI: ['电脑在思考中…🤔', '正在计划下一步…⏳', '嗯…🧐'],
+        msgIllegal: ['那堆已经空了！😅', '那里没有火柴！🚫', '选一个非空的行！❌'],
+        msgThink: ['电脑在思考中…🤔', '计算中…⏳', '嗯…🧐'],
+        winTitle: '你赢了！🏆', winMsg: '太棒了！你取走了最后一根火柴！🌟',
+        loseTitle: '电脑赢了！', loseMsg: '不要放弃 — 每次游戏都让你变得更强！💪',
+        hintBtn: '💡 显示提示', backBtn2: '← 选择难度', replayBtn: '🔄 再来一局', levelBtn: '🎮 选择难度',
+        lmTitle2: '🌐 选择语言',
+        turnYou: '你的回合', turnCPU: '电脑回合',
+        rowLabel: '行',
+        hintMsg: '从{r}取走{n}根！', hintNone: '处境艰难 — 尽力而为吧！',
+    },
+
+    ja: {
+        langBtn: '🌐 言語',
+        lmTitle: '🌐 言語を選ぶ',
+        badge: '✨ クラシック戦略ゲーム',
+        title: 'ニムゲーム 🔥',
+        sub: 'マッチ棒の古典ゲームをマスターしよう！',
+        r1t: 'マッチを取る',     r1d: '自分の番に、1列から1本以上のマッチを取ります。',
+        r2t: '最後の人が勝ち',   r2d: '最後のマッチを取ったプレイヤーが勝ちです！',
+        r3t: '先を読む',         r3d: '慎重に計画しよう — 完璧な数学的戦略があります！',
+        r4t: 'XORの秘密',        r4d: '全ての山のXORを計算。結果が0なら不利です！',
+        playBtn: 'はじめる！🚀',
+        lvTitle: '🎮 レベルを選ぼう', lvSub: '自分のレベルに合った挑戦を選んでね！',
+        lv1Name: '初心者',   lv1Desc: '山: 3, 4, 5<br>ランダムAI',      lv1Badge: '簡単',
+        lv2Name: '探検家',   lv2Desc: '山: 3, 5, 7<br>混合AI',          lv2Badge: '普通',
+        lv3Name: 'チャンピオン', lv3Desc: '山: 1, 3, 5, 7<br>完璧AI',    lv3Badge: '難しい',
+        backBtn: '← 戻る',
+        rmTitle: '📖 ニムルール', rmSub: '遊び方！',
+        rm1t: '1列から取る', rm1d: '自分の番に、ちょうど1列から1本以上のマッチを取ります。',
+        rm2t: '最後のマッチで勝ち', rm2d: '最後のマッチを取ったプレイヤーがゲームに勝ちます！',
+        rm3t: 'スキップ禁止', rm3d: '自分の番に少なくとも1本のマッチを取る必要があります。',
+        rm4t: 'XOR戦略', rm4d: '全ての山のXORを計算。非ゼロのXORは勝つ手があることを意味します！',
+        rmClose: 'わかった！遊ぼう 🎉',
+        spTitle: '山の状況',
+        msgStart: 'マッチの上にマウスを置いて選択し、クリックして取ってね！🔥',
+        msgYourTurn: ['あなたの番 — 賢く選ぼう！🤔', 'どの列を選ぶ？😊', 'あなたの番！💪', '慎重に考えて！⭐'],
+        msgGood: ['いい手！✨', 'うまい！👍', '素晴らしい！🌟', '賢い！🧠'],
+        msgAI: ['コンピュータが考え中…🤔', '次の手を計画中…⏳', 'うーん…🧐'],
+        msgIllegal: ['その山は空です！😅', 'そこにマッチはありません！🚫', '空でない列を選んで！❌'],
+        msgThink: ['コンピュータが考え中…🤔', '計算中…⏳', 'うーん…🧐'],
+        winTitle: 'あなたの勝ち！🏆', winMsg: 'すごい！最後のマッチを取りました！🌟',
+        loseTitle: 'コンピュータの勝ち！', loseMsg: 'あきらめないで — 毎回の試合があなたを強くします！💪',
+        hintBtn: '💡 ヒントを見る', backBtn2: '← レベル選択', replayBtn: '🔄 もう一度', levelBtn: '🎮 レベル選択',
+        lmTitle2: '🌐 言語を選ぶ',
+        turnYou: 'あなたの番', turnCPU: 'コンピュータの番',
+        rowLabel: '列',
+        hintMsg: '{r}から{n}本取ろう！', hintNone: '厳しい状況 — ベストを尽くして！',
+    },
+
+    es: {
+        langBtn: '🌐 Idioma',
+        lmTitle: '🌐 Elegir Idioma',
+        badge: '✨ Juego de Estrategia Clásico',
+        title: 'Nim 🔥',
+        sub: '¡Domina el antiguo juego de cerillas!',
+        r1t: 'Toma Cerillas',    r1d: 'En tu turno, toma 1 o más cerillas de cualquier fila.',
+        r2t: 'El Último Gana',   r2d: '¡El jugador que toma la última cerilla gana!',
+        r3t: 'Piensa Adelante',  r3d: '¡Planifica con cuidado — hay una estrategia matemática perfecta!',
+        r4t: 'El Secreto XOR',   r4d: 'Haz XOR de todos los montones. ¡Si el resultado es 0, estás en problemas!',
+        playBtn: '¡Jugar! 🚀',
+        lvTitle: '🎮 Elige tu Nivel', lvSub: '¡Elige un desafío que se adapte a tu habilidad!',
+        lv1Name: 'Principiante', lv1Desc: 'Montones: 3, 4, 5<br>IA Aleatoria',     lv1Badge: 'Fácil',
+        lv2Name: 'Explorador',   lv2Desc: 'Montones: 3, 5, 7<br>IA Mixta',         lv2Badge: 'Medio',
+        lv3Name: 'Campeón',      lv3Desc: 'Montones: 1, 3, 5, 7<br>IA Perfecta',   lv3Badge: 'Difícil',
+        backBtn: '← Volver',
+        rmTitle: '📖 Reglas Nim', rmSub: '¡Cómo jugar!',
+        rm1t: 'Toma de una fila', rm1d: 'En tu turno, toma 1 o más cerillas de exactamente una fila.',
+        rm2t: 'El último gana',   rm2d: '¡El jugador que tome la última cerilla gana el juego!',
+        rm3t: 'Sin saltar',       rm3d: 'Debes tomar al menos una cerilla en tu turno.',
+        rm4t: 'Estrategia XOR',   rm4d: '¡Haz XOR de todos los montones. Un XOR no nulo significa que hay un movimiento ganador!',
+        rmClose: '¡Entendido! ¡A jugar! 🎉',
+        spTitle: 'Estado de Pilas',
+        msgStart: '¡Pasa el ratón sobre las cerillas para seleccionar, luego haz clic para tomarlas! 🔥',
+        msgYourTurn: ['Tu turno — ¡elige sabiamente! 🤔', '¿Qué fila elegirás? 😊', '¡Tu movimiento! 💪', '¡Piensa con cuidado! ⭐'],
+        msgGood: ['¡Buen movimiento! ✨', '¡Bien jugado! 👍', '¡Excelente! 🌟', '¡Inteligente! 🧠'],
+        msgAI: ['La computadora está pensando… 🤔', 'Planeando el próximo movimiento… ⏳', 'Hmm… 🧐'],
+        msgIllegal: ['¡Ese montón está vacío! 😅', '¡No hay cerillas ahí! 🚫', '¡Elige una fila no vacía! ❌'],
+        msgThink: ['La computadora está pensando… 🤔', 'Calculando… ⏳', 'Hmm… 🧐'],
+        winTitle: '¡Ganaste! 🏆', winMsg: '¡Increíble! ¡Tomaste la última cerilla! 🌟',
+        loseTitle: '¡Ganó la Computadora!', loseMsg: '¡No te rindas — cada juego te hace más fuerte! 💪',
+        hintBtn: '💡 Mostrar Pista', backBtn2: '← Selección de Nivel', replayBtn: '🔄 Jugar de Nuevo', levelBtn: '🎮 Selección de Nivel',
+        lmTitle2: '🌐 Elegir Idioma',
+        turnYou: 'Tu Turno', turnCPU: 'Turno de Computadora',
+        rowLabel: 'Fila',
+        hintMsg: '¡Toma {n} cerillas de {r}!', hintNone: '¡Situación difícil — da lo mejor de ti!',
+    },
+};
+
+/* ─────────────────────────────────
+   Language helpers
+───────────────────────────────── */
+let lang = 'en';
+
+function tx(key) { return (T[lang] || T.en)[key] || (T.en[key] || ''); }
+function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function applyLang() {
+    try {
+        const L = T[lang];
+        document.documentElement.lang = lang;
+        document.getElementById('lang-btn').textContent = L.langBtn;
+
+        // intro
+        document.getElementById('i-badge').textContent = L.badge;
+        document.getElementById('i-title').textContent = L.title;
+        document.getElementById('i-sub').textContent   = L.sub;
+        document.getElementById('r1-t').textContent = L.r1t; document.getElementById('r1-d').textContent = L.r1d;
+        document.getElementById('r2-t').textContent = L.r2t; document.getElementById('r2-d').textContent = L.r2d;
+        document.getElementById('r3-t').textContent = L.r3t; document.getElementById('r3-d').textContent = L.r3d;
+        document.getElementById('r4-t').textContent = L.r4t; document.getElementById('r4-d').textContent = L.r4d;
+        document.getElementById('i-btn').textContent = L.playBtn;
+
+        // level
+        document.getElementById('lv-title').textContent  = L.lvTitle;
+        document.getElementById('lv-sub').textContent    = L.lvSub;
+        document.getElementById('lv1-name').textContent  = L.lv1Name;
+        document.getElementById('lv1-desc').innerHTML    = L.lv1Desc;
+        document.getElementById('lv1-badge').textContent = L.lv1Badge;
+        document.getElementById('lv2-name').textContent  = L.lv2Name;
+        document.getElementById('lv2-desc').innerHTML    = L.lv2Desc;
+        document.getElementById('lv2-badge').textContent = L.lv2Badge;
+        document.getElementById('lv3-name').textContent  = L.lv3Name;
+        document.getElementById('lv3-desc').innerHTML    = L.lv3Desc;
+        document.getElementById('lv3-badge').textContent = L.lv3Badge;
+        document.getElementById('lv-back').textContent   = L.backBtn;
+
+        // game
+        document.getElementById('sp-title').textContent    = L.spTitle;
+        document.getElementById('btn-hint-lbl').textContent = L.hintBtn.replace('💡 ','');
+        document.getElementById('btn-back-lbl').textContent = (L.backBtn2||'← Level Select').replace('← ','');
+
+        // rules modal
+        document.getElementById('rm-title').textContent = L.rmTitle;
+        document.getElementById('rm-sub').textContent   = L.rmSub;
+        document.getElementById('rm1-t').textContent = L.rm1t; document.getElementById('rm1-d').textContent = L.rm1d;
+        document.getElementById('rm2-t').textContent = L.rm2t; document.getElementById('rm2-d').textContent = L.rm2d;
+        document.getElementById('rm3-t').textContent = L.rm3t; document.getElementById('rm3-d').textContent = L.rm3d;
+        document.getElementById('rm4-t').textContent = L.rm4t; document.getElementById('rm4-d').textContent = L.rm4d;
+        document.getElementById('rm-close').textContent = L.rmClose;
+
+        // result modal
+        document.getElementById('res-replay').textContent = L.replayBtn;
+        document.getElementById('res-level').textContent  = L.levelBtn;
+
+        // lang modal
+        document.getElementById('lm-title').textContent = L.lmTitle;
+
+        // Highlight selected lang option
+        ['en','ko','zh','ja','es'].forEach(c => {
+            const el = document.getElementById('lo-'+c);
+            if (el) el.classList.toggle('selected', c === lang);
+        });
+
+        // Update pile status if game is running
+        updatePileStatus();
+    } catch(e) { console.warn('applyLang error:', e); }
+}
+
+function setLang(l) {
+    lang = l;
+    applyLang();
+    document.getElementById('lang-modal').classList.remove('show');
+    if (document.getElementById('lang-screen').classList.contains('active')) {
+        showIntroScreen();
+    }
+    document.getElementById('lang-btn').style.display  = 'block';
+    document.getElementById('vol-ctrl').style.display  = 'flex';
+    syncVolUI();
+}
+
+function openLangModal() { document.getElementById('lang-modal').classList.add('show'); }
+
+document.getElementById('lang-modal').addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('show');
+});
+
+/* ─────────────────────────────────
+   Screen Navigation
+───────────────────────────────── */
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+function showIntroScreen()   { showScreen('intro-screen'); }
+function showLevelScreen()   { showScreen('level-screen'); }
+function goToLevelScreen()   { showScreen('level-screen'); }
+function fromResultToLevel() { closeResult(); showScreen('level-screen'); }
+
+/* ─────────────────────────────────
+   Audio Engine
+───────────────────────────────── */
+let audioCtx    = null;
+let masterVolume = 0.7;
+let isMuted      = false;
+let prevVolume   = 0.7;
+
+function getAC() {
+    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+
+function vol(scale=1) { return isMuted ? 0 : masterVolume * scale; }
+
+function tone(f, d, type='sine', scale=1) {
+    const v = vol(scale);
+    if (v <= 0) return;
+    try {
+        const ac=getAC(), o=ac.createOscillator(), g=ac.createGain();
+        o.connect(g); g.connect(ac.destination);
+        o.type=type; o.frequency.value=f;
+        g.gain.setValueAtTime(v, ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+d);
+        o.start(); o.stop(ac.currentTime+d);
+    } catch(e){}
+}
+
+function playStoneClack(scale=1) {
+    const v = vol(scale);
+    if (v <= 0) return;
+    try {
+        const ac  = getAC();
+        const now = ac.currentTime;
+        const SR     = ac.sampleRate;
+        const bufLen = Math.floor(SR * 0.06);
+        const nBuf   = ac.createBuffer(1, bufLen, SR);
+        const data   = nBuf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) {
+            data[i] = (Math.random()*2-1) * Math.exp(-i / (bufLen * 0.12));
+        }
+        const nSrc = ac.createBufferSource();
+        nSrc.buffer = nBuf;
+        const bpf = ac.createBiquadFilter();
+        bpf.type            = 'bandpass';
+        bpf.frequency.value = 1400;
+        bpf.Q.value         = 0.8;
+        const nGain = ac.createGain();
+        nGain.gain.setValueAtTime(v * 1.4, now);
+        nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+        nSrc.connect(bpf); bpf.connect(nGain); nGain.connect(ac.destination);
+        nSrc.start(now);
+        const osc = ac.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.14);
+        const oGain = ac.createGain();
+        oGain.gain.setValueAtTime(v * 0.55, now);
+        oGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(oGain); oGain.connect(ac.destination);
+        osc.start(now); osc.stop(now + 0.18);
+    } catch(e){}
+}
+
+const sfx = {
+    take:  () => playStoneClack(),
+    bad:   () => tone(200, 0.1, 'sawtooth', 0.7),
+    win:   () => [523,659,784,1047].forEach((f,i) => setTimeout(()=>tone(f,0.25,'sine',1.0), i*110)),
+    lose:  () => [440,370,330,262].forEach((f,i) => setTimeout(()=>tone(f,0.22,'sine',0.8), i*120)),
+    hint:  () => tone(660, 0.15, 'sine', 0.6),
+};
+
+/* ─────────────────────────────────
+   Volume UI
+───────────────────────────────── */
+function toggleVolPanel() {
+    const panel = document.getElementById('vol-panel');
+    panel.classList.toggle('show');
+}
+
+document.addEventListener('click', (e) => {
+    const ctrl = document.getElementById('vol-ctrl');
+    if (ctrl && !ctrl.contains(e.target)) {
+        document.getElementById('vol-panel').classList.remove('show');
+    }
+});
+
+function onSliderInput(val) {
+    isMuted      = false;
+    masterVolume = val / 100;
+    prevVolume   = masterVolume;
+    syncVolUI();
+}
+
+function toggleMute() {
+    if (isMuted) {
+        isMuted      = false;
+        masterVolume = prevVolume > 0 ? prevVolume : 0.5;
+        document.getElementById('vol-slider').value = Math.round(masterVolume * 100);
+    } else {
+        prevVolume   = masterVolume;
+        isMuted      = true;
+        masterVolume = 0;
+    }
+    syncVolUI();
+}
+
+function syncVolUI() {
+    const pct  = Math.round(masterVolume * 100);
+    const icon = isMuted || pct === 0 ? '🔇' : pct < 35 ? '🔈' : pct < 70 ? '🔉' : '🔊';
+    document.getElementById('vol-icon-btn').textContent = icon;
+    document.getElementById('vol-pct-btn').textContent  = pct + '%';
+    document.getElementById('mute-btn').textContent     = icon;
+    document.getElementById('vol-pct-disp').textContent = pct + '%';
+    document.getElementById('vol-slider').value         = pct;
+    const slider = document.getElementById('vol-slider');
+    slider.style.background =
+        `linear-gradient(to right, var(--gold) 0%, var(--gold) ${pct}%, rgba(255,255,255,0.2) ${pct}%)`;
+    const muteBtn = document.getElementById('mute-btn');
+    muteBtn.classList.toggle('muted', isMuted || pct === 0);
+}
+
+/* ─────────────────────────────────
+   Particles
+───────────────────────────────── */
+const pcvs = document.getElementById('pcvs');
+const pctx = pcvs.getContext('2d');
+let ptls = [];
+
+function resizePcvs(){ pcvs.width=innerWidth; pcvs.height=innerHeight; }
+window.addEventListener('resize', resizePcvs); resizePcvs();
+
+function launchConfetti(){
+    ptls = [];
+    const colors = ['#f9a825','#4caf50','#2196f3','#e91e63','#9c27b0','#ff5722','#00bcd4'];
+    for(let i=0;i<130;i++) ptls.push({
+        x:Math.random()*pcvs.width, y:-20,
+        vx:(Math.random()-0.5)*6, vy:2+Math.random()*5,
+        sz:6+Math.random()*8, color:colors[Math.floor(Math.random()*colors.length)],
+        rot:Math.random()*360, drot:(Math.random()-0.5)*9, alpha:1
+    });
+    animPtls();
+}
+function animPtls(){
+    pctx.clearRect(0,0,pcvs.width,pcvs.height);
+    ptls = ptls.filter(p=>p.alpha>0.05&&p.y<pcvs.height+40);
+    ptls.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy; p.vy+=0.13; p.rot+=p.drot;
+        if(p.y>pcvs.height*0.6) p.alpha-=0.018;
+        pctx.save(); pctx.globalAlpha=p.alpha;
+        pctx.translate(p.x,p.y); pctx.rotate(p.rot*Math.PI/180);
+        pctx.fillStyle=p.color; pctx.fillRect(-p.sz/2,-p.sz/4,p.sz,p.sz/2);
+        pctx.restore();
+    });
+    if(ptls.length) requestAnimationFrame(animPtls);
+    else pctx.clearRect(0,0,pcvs.width,pcvs.height);
+}
+
+/* ─────────────────────────────────
+   NIM Game State
+───────────────────────────────── */
+const LEVEL_PILES  = { 1:[3,4,5], 2:[3,5,7], 3:[1,3,5,7] };
+const LEVEL_DELAYS = { 1:600, 2:800, 3:1000 };
+
+let piles = [];
+let initPiles = [];
+let level = 1;
+let playerTurn = true;
+let gameOver = false;
+let aiThinking = false;
+let hoverRow = -1;
+let hoverCount = 0;
+let hintRow = -1;
+let hintCount = 0;
+
+let canvas, ctx;
+
+const MARGIN_LEFT = 75;
+const MARGIN_Y    = 18;
+const ROW_HEIGHT  = 100;
+const ROW_GAP     = 8;
+const STICK_W     = 18;
+const STICK_H     = 72;
+const STICK_HEAD  = 9;
+const STICK_GAP   = 10;
+
+function canvasWidth() {
+    const maxPile = Math.max(...initPiles);
+    return MARGIN_LEFT + maxPile * (STICK_W + STICK_GAP) + 30;
+}
+function canvasHeight() {
+    return MARGIN_Y * 2 + piles.length * ROW_HEIGHT + (piles.length - 1) * ROW_GAP;
+}
+
+function startGame(lv) {
+    level      = lv;
+    piles      = [...LEVEL_PILES[lv]];
+    initPiles  = [...piles];
+    playerTurn = true;
+    gameOver   = false;
+    aiThinking = false;
+    hoverRow   = -1;
+    hoverCount = 0;
+    hintRow    = -1;
+    hintCount  = 0;
+
+    showScreen('game-screen');
+
+    canvas = document.getElementById('board-canvas');
+    canvas.width  = canvasWidth();
+    canvas.height = canvasHeight();
+    ctx = canvas.getContext('2d');
+
+    canvas.onmousedown  = null;
+    canvas.onclick      = null;
+    canvas.onmousemove  = onMouseMove;
+    canvas.onmouseleave = onMouseLeave;
+    canvas.onclick      = onCanvasClick;
+
+    // Touch events
+    canvas.addEventListener('touchstart',  onTouchStart,  {passive:false});
+    canvas.addEventListener('touchmove',   onTouchMove,   {passive:false});
+    canvas.addEventListener('touchend',    onTouchEnd,    {passive:false});
+
+    document.getElementById('btn-hint').style.display = lv === 1 ? 'flex' : 'none';
+
+    updatePileStatus();
+    render();
+    setMsg(tx('msgStart'));
+    updateTurnUI();
+}
+
+function replayGame()  { closeResult(); startGame(level); }
+function openRules()   { document.getElementById('rules-modal').classList.add('show'); }
+function closeRules()  { document.getElementById('rules-modal').classList.remove('show'); }
+function closeResult() { document.getElementById('result-modal').classList.remove('show'); }
+
+/* ─────────────────────────────────
+   Rendering
+───────────────────────────────── */
+function rowY(r) {
+    return MARGIN_Y + r * (ROW_HEIGHT + ROW_GAP);
+}
+
+function stickX(s) {
+    return MARGIN_LEFT + s * (STICK_W + STICK_GAP);
+}
+
+function render() {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Wood background
+    const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    bg.addColorStop(0, '#2a1a0a');
+    bg.addColorStop(1, '#3d2810');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    piles.forEach((count, r) => {
+        const maxCount = initPiles[r];
+        const y = rowY(r);
+        const centerY = y + ROW_HEIGHT / 2;
+
+        // Row label
+        ctx.fillStyle = 'rgba(255,220,150,0.85)';
+        ctx.font = 'bold 13px Segoe UI,Arial';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        const rowLbl = tx('rowLabel') + ' ' + (r + 1);
+        ctx.fillText(rowLbl, MARGIN_LEFT - 10, centerY);
+
+        // Draw each slot (ghost or real match)
+        for (let s = 0; s < maxCount; s++) {
+            const x = stickX(s);
+            const taken = s >= count;
+            const highlighted = !taken && !gameOver && playerTurn && !aiThinking
+                                && r === hoverRow && s >= (count - hoverCount);
+            const isHint = !taken && r === hintRow && hintCount > 0
+                          && s >= (count - hintCount);
+
+            if (taken) {
+                drawGhostStick(x, centerY);
+            } else if (highlighted) {
+                drawStick(x, centerY, true, false);
+            } else if (isHint) {
+                drawStick(x, centerY, false, true);
+            } else {
+                drawStick(x, centerY, false, false);
+            }
+        }
+    });
+}
+
+function drawStick(x, cy, highlighted, isHint) {
+    const headR  = STICK_HEAD;
+    const bodyY  = cy - STICK_H / 2 + headR;
+    const bodyH  = STICK_H - headR;
+
+    ctx.save();
+    if (highlighted) {
+        ctx.shadowColor = '#ffc107';
+        ctx.shadowBlur  = 14;
+    } else if (isHint) {
+        ctx.shadowColor = '#2196f3';
+        ctx.shadowBlur  = 16;
+    }
+
+    // Body gradient
+    const bodyGrad = ctx.createLinearGradient(x, bodyY, x + STICK_W, bodyY);
+    if (highlighted) {
+        bodyGrad.addColorStop(0, '#ffe082');
+        bodyGrad.addColorStop(0.4, '#ffd54f');
+        bodyGrad.addColorStop(1, '#e6a000');
+    } else if (isHint) {
+        bodyGrad.addColorStop(0, '#90caf9');
+        bodyGrad.addColorStop(0.4, '#42a5f5');
+        bodyGrad.addColorStop(1, '#1565c0');
+    } else {
+        bodyGrad.addColorStop(0, '#d4a96a');
+        bodyGrad.addColorStop(0.4, '#c8954d');
+        bodyGrad.addColorStop(1, '#9a6a30');
+    }
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.roundRect(x, bodyY, STICK_W, bodyH, 3);
+    ctx.fill();
+
+    // Head (circle on top)
+    const headColor = highlighted ? '#ff8f00' : isHint ? '#1976d2' : '#c0392b';
+    const headGrad = ctx.createRadialGradient(
+        x + STICK_W/2 - 3, cy - STICK_H/2 + headR - 3, 2,
+        x + STICK_W/2, cy - STICK_H/2 + headR, headR
+    );
+    headGrad.addColorStop(0, highlighted ? '#ffecb3' : isHint ? '#bbdefb' : '#e74c3c');
+    headGrad.addColorStop(1, headColor);
+    ctx.fillStyle = headGrad;
+    ctx.beginPath();
+    ctx.arc(x + STICK_W / 2, cy - STICK_H / 2 + headR, headR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawGhostStick(x, cy) {
+    const headR = STICK_HEAD;
+    const bodyY = cy - STICK_H / 2 + headR;
+    const bodyH = STICK_H - headR;
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = '#aaa';
+    ctx.beginPath();
+    ctx.roundRect(x, bodyY, STICK_W, bodyH, 3);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + STICK_W / 2, cy - STICK_H / 2 + headR, headR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+
+/* ─────────────────────────────────
+   Hit Testing
+───────────────────────────────── */
+function hitTest(cx, cy) {
+    for (let r = 0; r < piles.length; r++) {
+        const count = piles[r];
+        if (count === 0) continue;
+        const ry = rowY(r);
+        const centerY = ry + ROW_HEIGHT / 2;
+        for (let s = 0; s < count; s++) {
+            const x = stickX(s);
+            if (cx >= x && cx <= x + STICK_W &&
+                cy >= centerY - STICK_H / 2 && cy <= centerY + STICK_H / 2) {
+                return { row: r, stickIdx: s };
+            }
+        }
+    }
+    return null;
+}
+
+function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top)  * scaleY,
+    };
+}
+
+/* ─────────────────────────────────
+   Mouse Events
+───────────────────────────────── */
+function onMouseMove(e) {
+    if (gameOver || !playerTurn || aiThinking) return;
+    const pos = getCanvasPos(e);
+    const hit = hitTest(pos.x, pos.y);
+    if (hit) {
+        hoverRow   = hit.row;
+        hoverCount = piles[hit.row] - hit.stickIdx;
+        canvas.style.cursor = 'pointer';
+    } else {
+        hoverRow   = -1;
+        hoverCount = 0;
+        canvas.style.cursor = 'default';
+    }
+    render();
+}
+
+function onMouseLeave() {
+    hoverRow   = -1;
+    hoverCount = 0;
+    render();
+}
+
+function onCanvasClick(e) {
+    if (gameOver || !playerTurn || aiThinking) return;
+    const pos = getCanvasPos(e);
+    const hit = hitTest(pos.x, pos.y);
+    if (!hit) return;
+
+    const row   = hit.row;
+    const count = piles[row] - hit.stickIdx;
+    playerMove(row, count);
+}
+
+/* ─────────────────────────────────
+   Touch Events
+───────────────────────────────── */
+function onTouchStart(e) {
+    e.preventDefault();
+    if (gameOver || !playerTurn || aiThinking) return;
+    const t = e.touches[0];
+    const pos = getCanvasPos(t);
+    const hit = hitTest(pos.x, pos.y);
+    if (hit) {
+        hoverRow   = hit.row;
+        hoverCount = piles[hit.row] - hit.stickIdx;
+        render();
+    }
+}
+
+function onTouchMove(e) {
+    e.preventDefault();
+    if (gameOver || !playerTurn || aiThinking) return;
+    const t = e.touches[0];
+    const pos = getCanvasPos(t);
+    const hit = hitTest(pos.x, pos.y);
+    if (hit) {
+        hoverRow   = hit.row;
+        hoverCount = piles[hit.row] - hit.stickIdx;
+    } else {
+        hoverRow   = -1;
+        hoverCount = 0;
+    }
+    render();
+}
+
+function onTouchEnd(e) {
+    e.preventDefault();
+    if (gameOver || !playerTurn || aiThinking) return;
+    if (hoverRow >= 0 && hoverCount > 0) {
+        const row   = hoverRow;
+        const count = hoverCount;
+        hoverRow   = -1;
+        hoverCount = 0;
+        playerMove(row, count);
+    }
+}
+
+/* ─────────────────────────────────
+   Game Logic
+───────────────────────────────── */
+function playerMove(row, count) {
+    if (piles[row] === 0) {
+        sfx.bad();
+        setMsg(rnd(tx('msgIllegal')));
+        return;
+    }
+    doMove(row, count);
+    sfx.take();
+    setMsg(rnd(tx('msgGood')));
+    hintRow = -1; hintCount = 0;
+    hoverRow = -1; hoverCount = 0;
+
+    if (checkWin()) {
+        endGame(true);
+        return;
+    }
+
+    playerTurn = false;
+    updateTurnUI();
+    aiThinking = true;
+    setMsg(rnd(tx('msgThink')));
+    render();
+
+    setTimeout(aiMove, LEVEL_DELAYS[level]);
+}
+
+function doMove(row, count) {
+    piles[row] = Math.max(0, piles[row] - count);
+    updatePileStatus();
+    render();
+}
+
+function checkWin() {
+    return piles.every(p => p === 0);
+}
+
+function aiMove() {
+    aiThinking = false;
+    const [row, count] = calcAiMove();
+    doMove(row, count);
+    sfx.take();
+    setMsg(rnd(tx('msgAI')));
+
+    if (checkWin()) {
+        endGame(false);
+        return;
+    }
+
+    playerTurn = true;
+    updateTurnUI();
+    render();
+    setMsg(rnd(tx('msgYourTurn')));
+}
+
+function calcAiMove() {
+    const nonEmpty = piles.map((p,i)=>({p,i})).filter(x=>x.p>0);
+
+    // Check if only 1 pile remains — always win
+    if (nonEmpty.length === 1) {
+        return [nonEmpty[0].i, nonEmpty[0].p];
+    }
+
+    if (level === 1) {
+        // Random move, but take all from last pile if only 1 non-empty
+        const pick = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+        const take = 1 + Math.floor(Math.random() * pick.p);
+        return [pick.i, take];
+    }
+
+    if (level === 2) {
+        if (Math.random() < 0.5) {
+            return xorMove();
+        }
+        const pick = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+        const take = 1 + Math.floor(Math.random() * pick.p);
+        return [pick.i, take];
+    }
+
+    // Level 3: perfect XOR
+    return xorMove();
+}
+
+function xorMove() {
+    const xorSum = piles.reduce((acc,p) => acc ^ p, 0);
+    if (xorSum !== 0) {
+        for (let i = 0; i < piles.length; i++) {
+            const target = piles[i] ^ xorSum;
+            if (target < piles[i]) {
+                return [i, piles[i] - target];
+            }
+        }
+    }
+    // Losing position: take 1 from largest
+    let maxIdx = 0;
+    piles.forEach((p,i) => { if (p > piles[maxIdx]) maxIdx = i; });
+    return [maxIdx, 1];
+}
+
+function showHint() {
+    sfx.hint();
+    const xorSum = piles.reduce((acc,p) => acc ^ p, 0);
+    if (xorSum !== 0) {
+        for (let i = 0; i < piles.length; i++) {
+            const target = piles[i] ^ xorSum;
+            if (target < piles[i]) {
+                hintRow   = i;
+                hintCount = piles[i] - target;
+                const msg = tx('hintMsg')
+                    .replace('{n}', hintCount)
+                    .replace('{r}', tx('rowLabel') + ' ' + (i+1));
+                setMsg('💡 ' + msg);
+                render();
+                return;
+            }
+        }
+    }
+    hintRow = -1; hintCount = 0;
+    setMsg(tx('hintNone'));
+    render();
+}
+
+function endGame(playerWon) {
+    gameOver = true;
+    hoverRow = -1; hoverCount = 0;
+    render();
+
+    if (playerWon) {
+        sfx.win();
+        launchConfetti();
+        setTimeout(() => showResult(true), 700);
+    } else {
+        sfx.lose();
+        setTimeout(() => showResult(false), 700);
+    }
+}
+
+function showResult(playerWon) {
+    document.getElementById('res-emoji').textContent = playerWon ? '🏆' : '😔';
+    document.getElementById('res-title').textContent = playerWon ? tx('winTitle') : tx('loseTitle');
+    document.getElementById('res-msg').textContent   = playerWon ? tx('winMsg')   : tx('loseMsg');
+    document.getElementById('result-modal').classList.add('show');
+}
+
+/* ─────────────────────────────────
+   UI Helpers
+───────────────────────────────── */
+function setMsg(msg) {
+    document.getElementById('msg-box').textContent = msg;
+}
+
+function updateTurnUI() {
+    const dot  = document.getElementById('turn-dot');
+    const text = document.getElementById('turn-text');
+    if (playerTurn) {
+        dot.className  = 'turn-dot you';
+        text.textContent = tx('turnYou');
+    } else {
+        dot.className  = 'turn-dot cpu';
+        text.textContent = tx('turnCPU');
+    }
+}
+
+function updatePileStatus() {
+    const container = document.getElementById('pile-status');
+    if (!container || piles.length === 0) return;
+    const maxInit = Math.max(...initPiles, 1);
+    let html = '';
+    piles.forEach((count, i) => {
+        const pct = (count / initPiles[i]) * 100;
+        html += `<div class="pile-row">
+            <span class="pile-label">${tx('rowLabel')} ${i+1}</span>
+            <div class="pile-bar-wrap"><div class="pile-bar" style="width:${pct}%"></div></div>
+            <span class="pile-count">${count}</span>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+/* ─────────────────────────────────
+   Window resize — redraw
+───────────────────────────────── */
+window.addEventListener('resize', () => {
+    if (canvas) render();
+});
+</script>
+</body>
+</html>

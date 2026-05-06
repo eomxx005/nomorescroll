@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f2027">
+  <title>Reversi — nomorescroll</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg-1:#0f2027; --bg-2:#203a43; --bg-3:#2c5364; --accent:#ffc107;
+            --board:#2e7d32; --board-line:#1b5e20; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter','Apple SD Gothic Neo','Pretendard','PingFang SC','Hiragino Sans','Malgun Gothic',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+      background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
+      color: #fff; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 24px 16px 64px;
+    }
+    .top-bar {
+      width: 100%; max-width: 560px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .back { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 0.95rem; }
+    .back:hover { color: var(--accent); }
+    .lang-select {
+      appearance: none;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 6px 28px 6px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem; font-family: inherit; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+    }
+
+    h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; text-align: center; }
+    .status {
+      font-size: 1.05rem; color: rgba(255,255,255,0.85);
+      margin-bottom: 12px; text-align: center; min-height: 1.6em;
+    }
+    .status.win { color: #4caf50; font-weight: 700; }
+    .status.lose { color: #f44336; font-weight: 700; }
+    .status.draw { color: var(--accent); font-weight: 700; }
+
+    .scores {
+      display: flex; gap: 16px; margin-bottom: 16px;
+      font-size: 1.05rem; align-items: center;
+    }
+    .score {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 20px;
+      background: rgba(255,255,255,0.06);
+      border: 2px solid transparent;
+    }
+    .score.active { border-color: var(--accent); }
+    .disc {
+      width: 18px; height: 18px; border-radius: 50%;
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3);
+    }
+    .disc.b { background: #1a1a1a; }
+    .disc.w { background: #f5f5f5; }
+
+    .mode-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .mode-btn {
+      appearance: none; border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.06); color: #fff;
+      padding: 8px 16px; border-radius: 10px;
+      font-size: 0.9rem; font-family: inherit; cursor: pointer;
+    }
+    .mode-btn.active { border-color: var(--accent); background: rgba(255,193,7,0.15); }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px;
+      background: var(--board-line);
+      padding: 6px;
+      border-radius: 8px;
+      width: min(440px, 92vw); aspect-ratio: 1;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .cell {
+      background: var(--board);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.1s;
+    }
+    .cell:hover.legal { background: #388e3c; }
+    .cell.legal::after {
+      content: "";
+      width: 26%; height: 26%;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+    }
+    .cell:not(.legal) { cursor: default; }
+    .cell-disc {
+      width: 84%; height: 84%;
+      border-radius: 50%;
+      box-shadow: inset 0 -3px 0 rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+    .cell-disc.b { background: #1a1a1a; }
+    .cell-disc.w { background: #f5f5f5; }
+
+    .reset-btn {
+      appearance: none; border: none;
+      background: var(--accent); color: #1a1a1a;
+      padding: 14px 28px; border-radius: 12px;
+      font-size: 1rem; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+    }
+    .reset-btn:hover { filter: brightness(1.1); }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="../index.html" class="back" data-i18n="back">← Back</a>
+    <select class="lang-select" id="lang-select" aria-label="Language">
+      <option value="en">English</option>
+      <option value="ko">한국어</option>
+      <option value="zh">中文</option>
+      <option value="ja">日本語</option>
+    </select>
+  </div>
+
+  <h1 data-i18n="title">Reversi</h1>
+  <p class="status" id="status" data-i18n="your_turn">Your turn (Black)</p>
+
+  <div class="scores">
+    <div class="score active" id="score-b">
+      <span class="disc b"></span>
+      <span data-i18n="black">Black</span>
+      <strong id="count-b">2</strong>
+    </div>
+    <div class="score" id="score-w">
+      <span class="disc w"></span>
+      <span data-i18n="white">White</span>
+      <strong id="count-w">2</strong>
+    </div>
+  </div>
+
+  <div class="mode-row">
+    <button class="mode-btn active" data-mode="ai" data-i18n="vs_ai">vs AI</button>
+    <button class="mode-btn" data-mode="human" data-i18n="vs_human">2 Players</button>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <button class="reset-btn" id="reset" data-i18n="new_game">New Game</button>
+
+  <script>
+    const I18N = {
+      en: { back:"← Back", title:"Reversi", vs_ai:"vs AI", vs_human:"2 Players", new_game:"New Game",
+        black:"Black", white:"White",
+        your_turn:"Your turn (Black)", ai_turn:"AI thinking...", b_turn:"Black's turn", w_turn:"White's turn",
+        you_win:"You win! 🎉", you_lose:"AI wins.", b_wins:"Black wins! 🎉", w_wins:"White wins! 🎉", draw:"It's a draw.",
+        no_moves:"No legal moves. Pass." },
+      ko: { back:"← 뒤로", title:"리버시", vs_ai:"AI 대전", vs_human:"2인용", new_game:"새 게임",
+        black:"흑", white:"백",
+        your_turn:"내 차례 (흑)", ai_turn:"AI 생각 중...", b_turn:"흑 차례", w_turn:"백 차례",
+        you_win:"이겼어요! 🎉", you_lose:"AI가 이겼어요.", b_wins:"흑 승리! 🎉", w_wins:"백 승리! 🎉", draw:"비겼어요.",
+        no_moves:"둘 곳이 없어요. 패스." },
+      zh: { back:"← 返回", title:"黑白棋", vs_ai:"对战AI", vs_human:"双人", new_game:"新游戏",
+        black:"黑", white:"白",
+        your_turn:"你的回合 (黑)", ai_turn:"AI 思考中...", b_turn:"黑方回合", w_turn:"白方回合",
+        you_win:"你赢了!🎉", you_lose:"AI 赢了。", b_wins:"黑方获胜!🎉", w_wins:"白方获胜!🎉", draw:"平局。",
+        no_moves:"无合法落子,跳过。" },
+      ja: { back:"← 戻る", title:"リバーシ", vs_ai:"AI対戦", vs_human:"2人対戦", new_game:"新しいゲーム",
+        black:"黒", white:"白",
+        your_turn:"あなたの番 (黒)", ai_turn:"AI 思考中...", b_turn:"黒の番", w_turn:"白の番",
+        you_win:"あなたの勝ち! 🎉", you_lose:"AI の勝ち。", b_wins:"黒の勝ち! 🎉", w_wins:"白の勝ち! 🎉", draw:"引き分け。",
+        no_moves:"打てる手がありません。パス。" },
+    };
+
+    const STORAGE = "nomorescroll-lang";
+    const SUPPORTED = ["en","ko","zh","ja"];
+    function detectLang() {
+      const u = new URLSearchParams(location.search).get("lang");
+      if (u && SUPPORTED.includes(u)) { localStorage.setItem(STORAGE, u); return u; }
+      const s = localStorage.getItem(STORAGE);
+      if (s && SUPPORTED.includes(s)) return s;
+      return "en";
+    }
+    let lang = detectLang();
+    function t(k) { return (I18N[lang] || I18N.en)[k] || k; }
+
+    const N = 8;
+    const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+    let board = [];
+    let blackTurn = true; // human is black in AI mode
+    let mode = "ai";
+    let gameOver = false;
+
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+
+    function newBoard() {
+      const b = Array.from({ length: N }, () => Array(N).fill(null));
+      b[3][3] = "W"; b[4][4] = "W";
+      b[3][4] = "B"; b[4][3] = "B";
+      return b;
+    }
+
+    function flipsForMove(b, r, c, p) {
+      if (b[r][c]) return [];
+      const opp = p === "B" ? "W" : "B";
+      const all = [];
+      for (const [dr, dc] of DIRS) {
+        const line = [];
+        let nr = r + dr, nc = c + dc;
+        while (nr >= 0 && nr < N && nc >= 0 && nc < N && b[nr][nc] === opp) {
+          line.push([nr, nc]);
+          nr += dr; nc += dc;
+        }
+        if (line.length > 0 && nr >= 0 && nr < N && nc >= 0 && nc < N && b[nr][nc] === p) {
+          all.push(...line);
+        }
+      }
+      return all;
+    }
+
+    function legalMoves(b, p) {
+      const moves = [];
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          if (flipsForMove(b, r, c, p).length > 0) moves.push([r, c]);
+        }
+      }
+      return moves;
+    }
+
+    function applyMove(b, r, c, p) {
+      const flips = flipsForMove(b, r, c, p);
+      if (!flips.length) return false;
+      b[r][c] = p;
+      for (const [fr, fc] of flips) b[fr][fc] = p;
+      return true;
+    }
+
+    function counts(b) {
+      let bl = 0, wh = 0;
+      for (const row of b) for (const v of row) {
+        if (v === "B") bl++; else if (v === "W") wh++;
+      }
+      return { bl, wh };
+    }
+
+    function applyLang() {
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+      });
+      updateStatus();
+    }
+
+    function updateStatus() {
+      const { bl, wh } = counts(board);
+      document.getElementById("count-b").textContent = bl;
+      document.getElementById("count-w").textContent = wh;
+      document.getElementById("score-b").classList.toggle("active", blackTurn && !gameOver);
+      document.getElementById("score-w").classList.toggle("active", !blackTurn && !gameOver);
+
+      if (gameOver) {
+        statusEl.className = "status";
+        if (bl > wh) {
+          statusEl.textContent = mode === "ai" ? t("you_win") : t("b_wins");
+          statusEl.classList.add("win");
+        } else if (wh > bl) {
+          statusEl.textContent = mode === "ai" ? t("you_lose") : t("w_wins");
+          statusEl.classList.add(mode === "ai" ? "lose" : "win");
+        } else {
+          statusEl.textContent = t("draw");
+          statusEl.classList.add("draw");
+        }
+        return;
+      }
+      statusEl.className = "status";
+      if (mode === "ai") {
+        statusEl.textContent = blackTurn ? t("your_turn") : t("ai_turn");
+      } else {
+        statusEl.textContent = blackTurn ? t("b_turn") : t("w_turn");
+      }
+    }
+
+    function render() {
+      boardEl.innerHTML = "";
+      const player = blackTurn ? "B" : "W";
+      const showLegal = !gameOver && (mode === "human" || blackTurn);
+      const legals = showLegal ? legalMoves(board, player).map(([r,c]) => r * N + c) : [];
+
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          if (legals.includes(r * N + c)) cell.classList.add("legal");
+          const v = board[r][c];
+          if (v) {
+            const disc = document.createElement("div");
+            disc.className = "cell-disc " + v.toLowerCase();
+            cell.appendChild(disc);
+          }
+          if (cell.classList.contains("legal")) {
+            cell.addEventListener("click", () => playMove(r, c));
+          }
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    function playMove(r, c) {
+      if (gameOver) return;
+      if (mode === "ai" && !blackTurn) return;
+      const p = blackTurn ? "B" : "W";
+      if (!applyMove(board, r, c, p)) return;
+      blackTurn = !blackTurn;
+      handleTurn();
+    }
+
+    function handleTurn() {
+      // check if next player has moves; if not, pass; if neither has moves, end
+      const player = blackTurn ? "B" : "W";
+      const opp = blackTurn ? "W" : "B";
+      const myMoves = legalMoves(board, player);
+      if (myMoves.length === 0) {
+        const oppMoves = legalMoves(board, opp);
+        if (oppMoves.length === 0) {
+          gameOver = true;
+          render();
+          updateStatus();
+          return;
+        }
+        // pass
+        blackTurn = !blackTurn;
+      }
+      render();
+      updateStatus();
+      if (mode === "ai" && !blackTurn && !gameOver) {
+        setTimeout(aiMove, 450);
+      }
+    }
+
+    // AI: prefer corners > edges > maximize flips, with corner-avoidance for adjacent squares
+    function aiMove() {
+      const moves = legalMoves(board, "W");
+      if (moves.length === 0) {
+        blackTurn = true;
+        handleTurn();
+        return;
+      }
+      const CORNERS = new Set(["0,0","0,7","7,0","7,7"]);
+      const X_SQUARES = new Set(["1,1","1,6","6,1","6,6"]);
+      let best = -Infinity;
+      let pick = moves[0];
+      for (const [r, c] of moves) {
+        const key = `${r},${c}`;
+        const flips = flipsForMove(board, r, c, "W").length;
+        let score = flips;
+        if (CORNERS.has(key)) score += 100;
+        else if (X_SQUARES.has(key)) score -= 50;
+        if (r === 0 || r === 7 || c === 0 || c === 7) score += 5;
+        // small randomness for kid-friendly
+        score += Math.random() * 3;
+        if (score > best) { best = score; pick = [r, c]; }
+      }
+      applyMove(board, pick[0], pick[1], "W");
+      blackTurn = !blackTurn;
+      handleTurn();
+    }
+
+    function reset() {
+      board = newBoard();
+      blackTurn = true;
+      gameOver = false;
+      render();
+      updateStatus();
+    }
+
+    document.getElementById("reset").addEventListener("click", reset);
+    document.querySelectorAll(".mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        mode = btn.dataset.mode;
+        document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b === btn));
+        reset();
+      });
+    });
+
+    const sel = document.getElementById("lang-select");
+    sel.value = lang;
+    sel.addEventListener("change", (e) => {
+      lang = e.target.value;
+      localStorage.setItem(STORAGE, lang);
+      applyLang();
+    });
+
+    board = newBoard();
+    applyLang();
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Gomoku — 어린이 오목 — 儿童五子棋</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green:#4caf50; --orange:#ff9800; --red:#f44336;
+            --blue:#2196f3; --purple:#9c27b0; --gold:#ffc107;
+        }
+
+        body {
+            font-family: 'Segoe UI','Helvetica Neue',Arial,
+                         'Apple SD Gothic Neo','Malgun Gothic',
+                         'PingFang SC','Microsoft YaHei',
+                         'Hiragino Sans','Meiryo', sans-serif;
+            background: linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        /* ── screens ── */
+        .screen { display:none; }
+        .screen.active { display:flex; flex-direction:column; align-items:center; }
+
+        /* ── language flag button (persistent) ── */
+        #lang-btn {
+            position: fixed;
+            top: 14px; right: 16px;
+            z-index: 400;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            border-radius: 50px;
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: background 0.2s;
+            display: none;
+        }
+        #lang-btn:hover { background: rgba(255,255,255,0.25); }
+
+        /* ── Volume control ── */
+        #vol-ctrl {
+            position: fixed;
+            top: 14px; left: 16px;
+            z-index: 400;
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        #vol-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            border-radius: 50px;
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        #vol-btn:hover { background: rgba(255,255,255,0.25); }
+
+        #vol-panel {
+            display: none;
+            background: rgba(15,25,45,0.92);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 16px;
+            padding: 14px 16px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+            width: 200px;
+            flex-direction: column;
+            gap: 12px;
+        }
+        #vol-panel.show { display: flex; }
+
+        .vol-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #mute-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            line-height: 1;
+        }
+        #mute-btn:hover { background: rgba(255,255,255,0.22); }
+        #mute-btn.muted { background: rgba(244,67,54,0.25); border-color: rgba(244,67,54,0.5); }
+
+        #vol-pct-disp {
+            color: var(--gold);
+            font-size: 0.82rem;
+            font-weight: 700;
+            min-width: 34px;
+            text-align: right;
+        }
+
+        #vol-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            background: linear-gradient(to right, var(--gold) 0%, var(--gold) 70%, rgba(255,255,255,0.2) 70%);
+        }
+        #vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--gold);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        #vol-slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
+        #vol-slider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%; border: none;
+            background: var(--gold);
+            cursor: pointer;
+        }
+
+        /* ══════════════════════════
+           LANGUAGE SELECT SCREEN
+        ══════════════════════════ */
+        #lang-screen { text-align: center; color: white; gap: 0; }
+
+        .lang-title {
+            font-size: clamp(2rem,6vw,3.2rem);
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg,#fff 30%,#ffd54f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .lang-sub { font-size: 1rem; opacity: 0.7; margin-bottom: 38px; }
+
+        .lang-grid { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+
+        .lang-card {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 22px 28px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s, border-color 0.2s;
+            min-width: 140px;
+            text-align: center;
+        }
+        .lang-card:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: var(--gold);
+            transform: translateY(-5px) scale(1.04);
+        }
+        .lang-flag  { font-size: 3rem; margin-bottom: 8px; }
+        .lang-name  { font-size: 1.1rem; font-weight: 800; color: white; }
+        .lang-native{ font-size: 0.85rem; color: rgba(255,255,255,0.65); margin-top: 4px; }
+
+        /* ══════════════════════════
+           INTRO / SPLASH
+        ══════════════════════════ */
+        #intro-screen { text-align:center; color:white; max-width:720px; width:100%; gap:0; }
+
+        .splash-badge {
+            display:inline-block;
+            background:rgba(255,215,0,0.15);
+            border:2px solid var(--gold);
+            border-radius:50px;
+            padding:6px 18px;
+            font-size:0.82rem;
+            color:var(--gold);
+            letter-spacing:2px;
+            text-transform:uppercase;
+            margin-bottom:16px;
+        }
+        .splash-title {
+            font-size: clamp(2.2rem,6vw,3.8rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg,#fff 30%,#ffd54f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .splash-sub { font-size:1rem; opacity:0.75; margin-bottom:34px; }
+
+        .rule-cards {
+            display:grid;
+            grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+            gap:14px;
+            margin-bottom:36px;
+            width:100%;
+        }
+        .rule-card {
+            background:rgba(255,255,255,0.08);
+            border:1px solid rgba(255,255,255,0.15);
+            border-radius:18px;
+            padding:20px 16px;
+            text-align:center;
+            backdrop-filter:blur(6px);
+        }
+        .rule-icon  { font-size:2.4rem; margin-bottom:8px; }
+        .rule-title { font-size:0.95rem; font-weight:700; color:var(--gold); margin-bottom:6px; }
+        .rule-text  { font-size:0.8rem; opacity:0.8; line-height:1.5; }
+
+        .btn-play-now {
+            display:inline-flex; align-items:center; gap:10px;
+            background:linear-gradient(135deg,#f9a825,#f57f17);
+            color:white; border:none; border-radius:50px;
+            padding:16px 40px; font-size:1.2rem; font-weight:800;
+            cursor:pointer; box-shadow:0 6px 24px rgba(245,127,23,0.5);
+            transition:transform 0.15s,box-shadow 0.15s; letter-spacing:0.5px;
+        }
+        .btn-play-now:hover { transform:translateY(-3px) scale(1.03); box-shadow:0 10px 32px rgba(245,127,23,0.65); }
+
+        /* ══════════════════════════
+           LEVEL SELECT
+        ══════════════════════════ */
+        #level-screen { text-align:center; color:white; gap:0; }
+        .level-title  { font-size:clamp(1.8rem,5vw,2.6rem); font-weight:900; margin-bottom:8px; color:white; }
+        .level-subtitle { font-size:1rem; opacity:0.7; margin-bottom:36px; }
+
+        .level-cards { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:28px; }
+
+        .lv-card {
+            background:white; border-radius:24px; padding:26px 28px;
+            cursor:pointer; transition:transform 0.2s,box-shadow 0.2s;
+            box-shadow:0 8px 32px rgba(0,0,0,0.4); min-width:155px;
+            border:3px solid transparent; text-align:center;
+            position:relative; overflow:hidden;
+        }
+        .lv-card::before { content:''; position:absolute; top:0;left:0;right:0; height:5px; }
+        .lv-card.easy::before { background:var(--green); }
+        .lv-card.mid::before  { background:var(--orange); }
+        .lv-card.hard::before { background:var(--red); }
+        .lv-card:hover { transform:translateY(-8px) scale(1.04); box-shadow:0 18px 50px rgba(0,0,0,0.5); }
+        .lv-card.easy:hover { border-color:var(--green); }
+        .lv-card.mid:hover  { border-color:var(--orange); }
+        .lv-card.hard:hover { border-color:var(--red); }
+
+        .lv-emoji { font-size:3rem; margin-bottom:8px; }
+        .lv-name  { font-size:1.4rem; font-weight:800; color:#222; }
+        .lv-who   { font-size:0.8rem; color:#777; margin:6px 0 10px; line-height:1.4; }
+        .lv-badge { display:inline-block; padding:3px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; color:white; }
+        .easy .lv-badge { background:var(--green); }
+        .mid  .lv-badge { background:var(--orange); }
+        .hard .lv-badge { background:var(--red); }
+
+        .btn-back-small {
+            background:transparent; border:1px solid rgba(255,255,255,0.3);
+            color:rgba(255,255,255,0.7); border-radius:50px;
+            padding:8px 20px; cursor:pointer; font-size:0.9rem; transition:all 0.2s;
+        }
+        .btn-back-small:hover { background:rgba(255,255,255,0.1); color:white; }
+
+        /* ══════════════════════════
+           GAME SCREEN
+        ══════════════════════════ */
+        #game-screen { gap:12px; }
+
+        .turn-bar {
+            background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2);
+            border-radius:50px; padding:8px 22px; color:white;
+            font-size:1rem; font-weight:700; display:flex; align-items:center; gap:10px;
+            backdrop-filter:blur(8px);
+        }
+        .turn-dot { width:18px; height:18px; border-radius:50%; transition:background 0.3s; }
+        .turn-dot.black { background:radial-gradient(circle at 35% 35%,#888,#111); box-shadow:0 0 8px rgba(255,255,255,0.2); }
+        .turn-dot.white { background:radial-gradient(circle at 35% 35%,#fff,#ccc); box-shadow:0 0 8px rgba(255,255,255,0.6); }
+
+        .game-row { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+
+        .board-wrapper {
+            background:#b8891a; border-radius:14px; padding:12px;
+            box-shadow:0 10px 40px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        canvas { display:block; border-radius:6px; cursor:pointer; }
+
+        .side-panel {
+            background:rgba(255,255,255,0.97); border-radius:20px; padding:16px;
+            width:215px; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+            display:flex; flex-direction:column; gap:9px;
+        }
+        .panel-title { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#aaa; }
+
+        .player-card {
+            display:flex; align-items:center; gap:10px; padding:10px 12px;
+            border-radius:14px; border:2px solid #eee; transition:all 0.25s; background:#fafafa;
+        }
+        .player-card.active-turn {
+            border-color:var(--green); background:#f1fdf4;
+            box-shadow:0 0 0 3px rgba(76,175,80,0.15);
+        }
+        .stone-badge { width:34px; height:34px; border-radius:50%; flex-shrink:0; box-shadow:2px 3px 8px rgba(0,0,0,0.35); }
+        .stone-badge.black { background:radial-gradient(circle at 35% 35%,#888,#111); }
+        .stone-badge.white { background:radial-gradient(circle at 35% 35%,#fff,#bbb); border:2px solid #ccc; }
+        .p-name  { font-size:0.88rem; font-weight:700; color:#222; }
+        .p-score { font-size:0.78rem; color:#777; }
+        .p-score span { font-weight:700; color:#333; }
+
+        .divider { border:none; border-top:1px solid #ececec; margin:2px 0; }
+
+        #msg-box {
+            background:#fffde7; border-left:4px solid var(--gold); border-radius:0 12px 12px 0;
+            padding:10px 12px; font-size:0.86rem; font-weight:600; color:#4a3800;
+            min-height:52px; display:flex; align-items:center; line-height:1.45;
+        }
+
+        .btn {
+            display:flex; align-items:center; justify-content:center; gap:6px;
+            width:100%; padding:10px; border:none; border-radius:12px;
+            font-size:0.88rem; font-weight:700; cursor:pointer;
+            transition:filter 0.15s,transform 0.1s;
+        }
+        .btn:hover  { filter:brightness(1.1); transform:translateY(-1px); }
+        .btn:active { transform:translateY(1px); }
+        .btn-hint  { background:var(--blue);   color:white; }
+        .btn-rules { background:var(--purple);  color:white; }
+        .btn-back  { background:#78909c;        color:white; font-size:0.8rem; padding:8px; }
+
+        /* ── Modals ── */
+        .overlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.72); z-index:300;
+            align-items:center; justify-content:center; padding:16px;
+        }
+        .overlay.show { display:flex; }
+        .modal-box {
+            background:white; border-radius:24px; padding:30px 26px;
+            max-width:480px; width:100%;
+            box-shadow:0 24px 72px rgba(0,0,0,0.6);
+            animation:pop 0.28s cubic-bezier(.34,1.56,.64,1);
+            max-height:90vh; overflow-y:auto;
+        }
+        @keyframes pop {
+            from { transform:scale(0.7); opacity:0; }
+            to   { transform:scale(1);   opacity:1; }
+        }
+
+        /* Language modal */
+        #lang-modal .modal-box { text-align:center; }
+        .lang-modal-title { font-size:1.5rem; font-weight:800; color:#222; margin-bottom:18px; }
+        .lang-modal-grid  { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+        .lang-opt {
+            background:#f5f5f5; border:2px solid #eee; border-radius:14px;
+            padding:12px 16px; cursor:pointer; text-align:center; min-width:110px;
+            transition:all 0.2s; font-size:0.9rem; font-weight:700; color:#333;
+        }
+        .lang-opt:hover { border-color:var(--gold); background:#fff8e1; }
+        .lang-opt.selected { border-color:var(--green); background:#f1fdf4; color:#1b5e20; }
+        .lang-opt .lf { font-size:1.8rem; display:block; margin-bottom:4px; }
+
+        /* Rules modal */
+        #rules-modal .modal-box { text-align:left; }
+        .rules-title { font-size:1.5rem; font-weight:800; color:#222; margin-bottom:4px; }
+        .rules-sub   { font-size:0.85rem; color:#888; margin-bottom:18px; }
+        .rule-row    { display:flex; gap:12px; align-items:flex-start; margin-bottom:14px; }
+        .rule-num {
+            width:28px; height:28px; min-width:28px; border-radius:50%;
+            background:linear-gradient(135deg,#f9a825,#f57f17);
+            color:white; font-weight:800; display:flex; align-items:center; justify-content:center; font-size:0.85rem;
+        }
+        .rule-body strong { font-size:0.92rem; color:#222; display:block; margin-bottom:3px; }
+        .rule-body p      { font-size:0.8rem; color:#555; line-height:1.5; }
+        .btn-close-rules {
+            background:var(--green); color:white; margin-top:18px; padding:12px;
+            border-radius:12px; font-size:0.95rem; font-weight:700;
+            border:none; cursor:pointer; width:100%;
+        }
+
+        /* Result modal */
+        #result-modal .modal-box { text-align:center; }
+        .res-emoji  { font-size:4rem; margin-bottom:8px; }
+        .res-title  { font-size:1.9rem; font-weight:900; color:#222; margin-bottom:6px; }
+        .res-msg    { font-size:0.95rem; color:#555; margin-bottom:24px; }
+        .modal-btns { display:flex; gap:10px; flex-direction:column; }
+        .btn-replay { background:var(--green); color:white; padding:12px; border-radius:12px; font-size:0.95rem; font-weight:700; border:none; cursor:pointer; }
+        .btn-level  { background:#607d8b;      color:white; padding:12px; border-radius:12px; font-size:0.95rem; font-weight:700; border:none; cursor:pointer; }
+
+        /* ── Particles ── */
+        #pcvs { position:fixed; inset:0; pointer-events:none; z-index:250; }
+
+        /* ── Spinner ── */
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .spinner {
+            display:inline-block; width:13px; height:13px;
+            border:2px solid rgba(255,152,0,0.3); border-top-color:#ff9800;
+            border-radius:50%; animation:spin 0.8s linear infinite;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width:700px) {
+            .side-panel { width:100%; max-width:570px; }
+            .game-row   { flex-direction:column; align-items:center; }
+            .rule-cards { grid-template-columns:1fr 1fr; }
+            .lang-grid  { gap:10px; }
+            .lang-card  { min-width:120px; padding:18px 20px; }
+            #board-canvas {
+                width: calc(100vw - 48px) !important;
+                height: calc(100vw - 48px) !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- persistent language button -->
+<button id="lang-btn" onclick="openLangModal()">🌐 Language</button>
+
+<!-- Volume control -->
+<div id="vol-ctrl">
+    <button id="vol-btn" onclick="toggleVolPanel()">
+        <span id="vol-icon-btn">🔊</span>
+        <span id="vol-pct-btn">70%</span>
+    </button>
+    <div id="vol-panel">
+        <div class="vol-row">
+            <button id="mute-btn" onclick="toggleMute()" title="Mute / Unmute">🔊</button>
+            <input type="range" id="vol-slider" min="0" max="100" value="70"
+                   oninput="onSliderInput(this.value)">
+            <span id="vol-pct-disp">70%</span>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ LANGUAGE SELECT (first screen) ═══════ -->
+<div id="lang-screen" class="screen active">
+    <div class="lang-title">🎯 Kids Gomoku</div>
+    <div class="lang-sub">Choose your language • 언어 선택 • 选择语言 • 言語を選ぶ • Elige idioma</div>
+    <div class="lang-grid">
+        <div class="lang-card" onclick="setLang('en')">
+            <div class="lang-flag">🇺🇸</div>
+            <div class="lang-name">English</div>
+            <div class="lang-native">English</div>
+        </div>
+        <div class="lang-card" onclick="setLang('ko')">
+            <div class="lang-flag">🇰🇷</div>
+            <div class="lang-name">한국어</div>
+            <div class="lang-native">Korean</div>
+        </div>
+        <div class="lang-card" onclick="setLang('zh')">
+            <div class="lang-flag">🇨🇳</div>
+            <div class="lang-name">中文</div>
+            <div class="lang-native">Chinese</div>
+        </div>
+        <div class="lang-card" onclick="setLang('ja')">
+            <div class="lang-flag">🇯🇵</div>
+            <div class="lang-name">日本語</div>
+            <div class="lang-native">Japanese</div>
+        </div>
+        <div class="lang-card" onclick="setLang('es')">
+            <div class="lang-flag">🇪🇸</div>
+            <div class="lang-name">Español</div>
+            <div class="lang-native">Spanish</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ INTRO SCREEN ═══════ -->
+<div id="intro-screen" class="screen">
+    <div class="splash-badge" id="i-badge">✨ Five in a Row Strategy Game</div>
+    <div class="splash-title" id="i-title">Kids Gomoku 🎯</div>
+    <div class="splash-sub"   id="i-sub">Get five in a row to win!</div>
+
+    <div class="rule-cards">
+        <div class="rule-card">
+            <div class="rule-icon">🎯</div>
+            <div class="rule-title" id="r1-t">The Goal</div>
+            <div class="rule-text"  id="r1-d">Be the first to get five stones in a row — horizontal, vertical, or diagonal!</div>
+        </div>
+        <div class="rule-card">
+            <div class="rule-icon">⬛</div>
+            <div class="rule-title" id="r2-t">You Go First</div>
+            <div class="rule-text"  id="r2-d">You play Black and always go first. Click any intersection on the board.</div>
+        </div>
+        <div class="rule-card">
+            <div class="rule-icon">🔄</div>
+            <div class="rule-title" id="r3-t">Take Turns</div>
+            <div class="rule-text"  id="r3-d">Players alternate placing one stone per turn. Stones never move once placed.</div>
+        </div>
+        <div class="rule-card">
+            <div class="rule-icon">🏁</div>
+            <div class="rule-title" id="r4-t">Game Over</div>
+            <div class="rule-text"  id="r4-d">The first player with five or more in a row wins!</div>
+        </div>
+    </div>
+
+    <button class="btn-play-now" id="i-btn" onclick="showLevelScreen()">Let's Play! 🚀</button>
+</div>
+
+<!-- ═══════ LEVEL SCREEN ═══════ -->
+<div id="level-screen" class="screen">
+    <div class="level-title"    id="lv-title">🎮 Choose Your Level</div>
+    <div class="level-subtitle" id="lv-sub">Pick a difficulty that matches your skill!</div>
+
+    <div class="level-cards">
+        <div class="lv-card easy" onclick="startGame(1)">
+            <div class="lv-emoji">🐣</div>
+            <div class="lv-name" id="lv1-name">Beginner</div>
+            <div class="lv-who"  id="lv1-who">New to Gomoku?<br>Start here!</div>
+            <span class="lv-badge" id="lv1-badge">15 × 15 Board</span>
+        </div>
+        <div class="lv-card mid" onclick="startGame(2)">
+            <div class="lv-emoji">🐥</div>
+            <div class="lv-name" id="lv2-name">Explorer</div>
+            <div class="lv-who"  id="lv2-who">Played a few times?<br>Try this!</div>
+            <span class="lv-badge" id="lv2-badge">15 × 15 Board</span>
+        </div>
+        <div class="lv-card hard" onclick="startGame(3)">
+            <div class="lv-emoji">🦅</div>
+            <div class="lv-name" id="lv3-name">Champion</div>
+            <div class="lv-who"  id="lv3-who">Challenge the<br>computer!</div>
+            <span class="lv-badge" id="lv3-badge">15 × 15 Board</span>
+        </div>
+    </div>
+
+    <button class="btn-back-small" id="lv-back" onclick="showIntroScreen()">← Back</button>
+</div>
+
+<!-- ═══════ GAME SCREEN ═══════ -->
+<div id="game-screen" class="screen">
+    <div class="turn-bar">
+        <div class="turn-dot black" id="turn-dot"></div>
+        <span id="turn-text">Your Turn (Black)</span>
+    </div>
+
+    <div class="game-row">
+        <div class="board-wrapper">
+            <canvas id="board-canvas"></canvas>
+        </div>
+
+        <div class="side-panel">
+            <div class="panel-title" id="sp-players">Players</div>
+            <div class="player-card active-turn" id="card-black">
+                <div class="stone-badge black"></div>
+                <div>
+                    <div class="p-name" id="p-you">You (Black)</div>
+                    <div class="p-score" id="p-you-stones">Stones: <span id="stones-black">0</span></div>
+                </div>
+            </div>
+            <div class="player-card" id="card-white">
+                <div class="stone-badge white"></div>
+                <div>
+                    <div class="p-name" id="p-cpu">Computer (White)</div>
+                    <div class="p-score" id="p-cpu-stones">Stones: <span id="stones-white">0</span></div>
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <div id="msg-box">Click any intersection to place your stone! 😊</div>
+
+            <button class="btn btn-hint"  id="btn-hint"  onclick="showHint()">💡 <span id="btn-hint-lbl">Show Hint</span></button>
+            <button class="btn btn-rules" onclick="openRules()">📖 <span id="btn-rules-lbl">Quick Rules</span></button>
+            <button class="btn btn-back"  onclick="goToLevelScreen()">← <span id="btn-back-lbl">Change Level</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ LANGUAGE MODAL ═══════ -->
+<div id="lang-modal" class="overlay">
+    <div class="modal-box">
+        <div class="lang-modal-title" id="lm-title">🌐 Choose Language</div>
+        <div class="lang-modal-grid">
+            <div class="lang-opt" id="lo-en" onclick="setLang('en')"><span class="lf">🇺🇸</span>English</div>
+            <div class="lang-opt" id="lo-ko" onclick="setLang('ko')"><span class="lf">🇰🇷</span>한국어</div>
+            <div class="lang-opt" id="lo-zh" onclick="setLang('zh')"><span class="lf">🇨🇳</span>中文</div>
+            <div class="lang-opt" id="lo-ja" onclick="setLang('ja')"><span class="lf">🇯🇵</span>日本語</div>
+            <div class="lang-opt" id="lo-es" onclick="setLang('es')"><span class="lf">🇪🇸</span>Español</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ RULES MODAL ═══════ -->
+<div id="rules-modal" class="overlay">
+    <div class="modal-box">
+        <div class="rules-title" id="rm-title">📖 Quick Rules</div>
+        <div class="rules-sub"   id="rm-sub">Gomoku in 60 seconds!</div>
+        <div class="rule-row"><div class="rule-num">1</div><div class="rule-body"><strong id="rm1-t">Place stones on intersections</strong><p id="rm1-d">Click any point where lines cross. Stones stay put once placed.</p></div></div>
+        <div class="rule-row"><div class="rule-num">2</div><div class="rule-body"><strong id="rm2-t">Get five in a row</strong><p id="rm2-d">Connect five of your stones horizontally, vertically, or diagonally to win!</p></div></div>
+        <div class="rule-row"><div class="rule-num">3</div><div class="rule-body"><strong id="rm3-t">Black goes first</strong><p id="rm3-d">You play Black and go first every game. The computer plays White.</p></div></div>
+        <div class="rule-row"><div class="rule-num">4</div><div class="rule-body"><strong id="rm4-t">Block your opponent</strong><p id="rm4-d">Stop the computer from getting five in a row, or you lose!</p></div></div>
+        <button class="btn-close-rules" id="rm-close" onclick="closeRules()">Got it! Let's play 🎉</button>
+    </div>
+</div>
+
+<!-- ═══════ RESULT MODAL ═══════ -->
+<div id="result-modal" class="overlay">
+    <div class="modal-box">
+        <div class="res-emoji" id="res-emoji">🏆</div>
+        <div class="res-title"  id="res-title">Game Over!</div>
+        <div class="res-msg"    id="res-msg"></div>
+        <div class="modal-btns">
+            <button class="btn-replay" id="res-replay" onclick="replayGame()">🔄 Play Again</button>
+            <button class="btn-level"  id="res-level"  onclick="fromResultToLevel()">🎮 Change Level</button>
+        </div>
+    </div>
+</div>
+
+<canvas id="pcvs"></canvas>
+
+<script>
+/* ─────────────────────────────────
+   I18N Translations
+───────────────────────────────── */
+const T = {
+    en: {
+        langBtn: '🌐 Language',
+        lmTitle: '🌐 Choose Language',
+        badge: '✨ Five in a Row Strategy Game',
+        title: 'Kids Gomoku 🎯',
+        sub:   'Get five in a row to win — simple to learn, fun to master!',
+        r1t:'The Goal',     r1d:'Be the first to get five stones in a row — horizontal, vertical, or diagonal!',
+        r2t:'You Go First', r2d:'You play Black and always go first. Click any intersection on the board.',
+        r3t:'Take Turns',   r3d:'Players alternate placing one stone per turn. Stones never move once placed.',
+        r4t:'Game Over',    r4d:'The first player with five or more in a row wins!',
+        playBtn: "Let's Play! 🚀",
+        lvTitle:'🎮 Choose Your Level', lvSub:'Pick a difficulty that matches your skill!',
+        lv1n:'Beginner', lv1w:'New to Gomoku?<br>Start here!',       lv1b:'15 × 15 Board',
+        lv2n:'Explorer', lv2w:'Played a few times?<br>Try this!',     lv2b:'15 × 15 Board',
+        lv3n:'Champion', lv3w:'Challenge the<br>computer!',           lv3b:'15 × 15 Board',
+        lvBack:'← Back',
+        spPlayers:'Players',
+        pYou:'You (Black)', pCpu:'Computer (White)',
+        pYouStones:'Stones:', pCpuStones:'Stones:',
+        btnHint:'Show Hint', btnRules:'Quick Rules', btnBack:'Change Level',
+        turnYou:'Your Turn (Black)', turnCpu:"Computer's Turn (White)", turnThink:'Thinking… (White)',
+        rmTitle:'📖 Quick Rules', rmSub:'Gomoku in 60 seconds!',
+        rm1t:'Place stones on intersections', rm1d:'Click any point where lines cross. Stones stay put once placed.',
+        rm2t:'Get five in a row',             rm2d:'Connect five stones horizontally, vertically, or diagonally!',
+        rm3t:'Black goes first',              rm3d:'You play Black and go first every game.',
+        rm4t:'Block your opponent',           rm4d:'Stop the computer from getting five in a row, or you lose!',
+        rmClose:"Got it! Let's play 🎉",
+        resReplay:'🔄 Play Again', resLevel:'🎮 Change Level',
+        winTitle:'You Won! 🏆',    winMsg:'Amazing! You got five in a row! Keep it up! 🌟',
+        loseTitle:'Computer Won!', loseMsg:"Don't give up — every game makes you stronger! 💪",
+        msgStart:'Click any intersection to place your stone! 😊',
+        msgYourTurn:['Your turn — where will you go? 🤔','Think carefully… 😊','Your move! 💪','You got this! ⭐'],
+        msgGood:    ['Nice move! ✨','Well played! 👍','Great thinking! 🌟','Smart! 🧠'],
+        msgThink:   ['Computer is thinking… 🤔','Planning my move… ⏳','Hmm… 🧐'],
+        msgHint:    '💡 Hint: try {pos} — highlighted in blue!',
+    },
+    ko: {
+        langBtn: '🌐 언어',
+        lmTitle: '🌐 언어 선택',
+        badge: '✨ 오목 전략 게임',
+        title: '어린이 오목 🎯',
+        sub:   '다섯 개를 이어 먼저 이기세요!',
+        r1t:'게임 목표',   r1d:'가로, 세로, 대각선으로 다섯 개의 돌을 먼저 이으면 이겨요!',
+        r2t:'흑이 먼저',   r2d:'나는 흑돌이에요! 항상 먼저 두고, 교차점을 클릭해 돌을 놓아요.',
+        r3t:'번갈아 두기', r3d:'한 번씩 번갈아 돌을 놓아요. 한 번 놓으면 움직일 수 없어요.',
+        r4t:'게임 종료',   r4d:'가로, 세로, 대각선으로 다섯 개를 먼저 이은 사람이 이겨요!',
+        playBtn:'시작하기! 🚀',
+        lvTitle:'🎮 레벨 선택', lvSub:'내 실력에 맞는 난이도를 골라봐요!',
+        lv1n:'쉬움',   lv1w:'오목이 처음이에요<br>여기서 시작!',  lv1b:'15 × 15 판',
+        lv2n:'보통',   lv2w:'몇 번 해봤나요?<br>도전해봐요!',      lv2b:'15 × 15 판',
+        lv3n:'어려움', lv3w:'컴퓨터에게<br>도전해봐요!',           lv3b:'15 × 15 판',
+        lvBack:'← 돌아가기',
+        spPlayers:'플레이어',
+        pYou:'나 (흑)', pCpu:'컴퓨터 (백)',
+        pYouStones:'놓은 돌:', pCpuStones:'놓은 돌:',
+        btnHint:'힌트 보기', btnRules:'규칙 보기', btnBack:'레벨 선택',
+        turnYou:'내 차례 (흑)', turnCpu:'컴퓨터 차례 (백)', turnThink:'생각 중… (백)',
+        rmTitle:'📖 오목 규칙', rmSub:'60초로 배우는 오목!',
+        rm1t:'교차점에 돌을 놓아요',  rm1d:'줄이 만나는 점을 클릭해요. 한 번 놓으면 못 움직여요.',
+        rm2t:'다섯 개를 이어요',      rm2d:'가로, 세로, 대각선으로 다섯 개를 먼저 이으면 이겨요!',
+        rm3t:'흑이 먼저 둬요',        rm3d:'나는 항상 흑돌로 먼저 두고 시작해요.',
+        rm4t:'상대방을 막아요',       rm4d:'컴퓨터가 다섯 개를 잇지 못하게 막아야 해요!',
+        rmClose:'이해했어요! 시작! 🎉',
+        resReplay:'🔄 다시 하기', resLevel:'🎮 레벨 선택',
+        winTitle:'내가 이겼어요! 🏆', winMsg:'대단해요! 다섯 개를 이었어요! 🌟',
+        loseTitle:'컴퓨터가 이겼어요!', loseMsg:'포기하지 마세요! 다음엔 꼭 이길 거예요! 💪',
+        msgStart:'돌을 놓아보세요! 😊',
+        msgYourTurn:['어디에 놓을까요? 🤔','신중하게 생각해봐요 😊','내 차례예요! 💪','할 수 있어요! ⭐'],
+        msgGood:    ['잘 뒀어요! ✨','멋진 수예요! 👍','훌륭해요! 🌟','스마트! 🧠'],
+        msgThink:   ['컴퓨터가 생각 중이에요… 🤔','다음 수를 계획 중이에요… ⏳','음… 🧐'],
+        msgHint:    '💡 힌트: {pos}에 놓아보세요 — 파란색 표시!',
+    },
+    zh: {
+        langBtn: '🌐 语言',
+        lmTitle: '🌐 选择语言',
+        badge: '✨ 五子棋策略游戏',
+        title: '儿童五子棋 🎯',
+        sub:   '先连成五子者获胜！',
+        r1t:'游戏目标', r1d:'率先在横、竖或斜方向连成五子即可获胜！',
+        r2t:'黑棋先行', r2d:'你执黑棋先行！点击棋盘交叉点落子。',
+        r3t:'轮流落子', r3d:'双方轮流落子，每次一颗。落子后不能移动。',
+        r4t:'游戏结束', r4d:'先连成五子（或更多）的玩家获胜！',
+        playBtn:'开始游戏！🚀',
+        lvTitle:'🎮 选择难度', lvSub:'选择适合你的难度！',
+        lv1n:'入门', lv1w:'第一次玩五子棋？<br>从这里开始！', lv1b:'15 × 15 棋盘',
+        lv2n:'进阶', lv2w:'有一些基础？<br>来挑战吧！',       lv2b:'15 × 15 棋盘',
+        lv3n:'高手', lv3w:'挑战<br>电脑吧！',                  lv3b:'15 × 15 棋盘',
+        lvBack:'← 返回',
+        spPlayers:'玩家',
+        pYou:'我（黑棋）', pCpu:'电脑（白棋）',
+        pYouStones:'落子：', pCpuStones:'落子：',
+        btnHint:'显示提示', btnRules:'快速规则', btnBack:'切换难度',
+        turnYou:'你的回合（黑棋）', turnCpu:'电脑回合（白棋）', turnThink:'思考中…（白棋）',
+        rmTitle:'📖 五子棋规则', rmSub:'60秒学会五子棋！',
+        rm1t:'在交叉点落子',    rm1d:'点击棋盘上线条交叉的点，棋子落下后不能移动。',
+        rm2t:'连成五子获胜',    rm2d:'率先在横、竖或斜方向连成五子即可获胜！',
+        rm3t:'黑棋先行',        rm3d:'你执黑棋，每局都先行落子。',
+        rm4t:'阻止对手',        rm4d:'不让电脑连成五子，否则你就输了！',
+        rmClose:'明白了！开始游戏 🎉',
+        resReplay:'🔄 再来一局', resLevel:'🎮 切换难度',
+        winTitle:'你赢了！🏆', winMsg:'太棒了！你连成了五子！🌟',
+        loseTitle:'电脑赢了！', loseMsg:'不要放弃，每次对局都让你变得更强！💪',
+        msgStart:'点击交叉点落子吧！😊',
+        msgYourTurn:['轮到你了，往哪里下？🤔','认真思考… 😊','你的回合！💪','加油！⭐'],
+        msgGood:    ['好棋！✨','下得不错！👍','真厉害！🌟','聪明！🧠'],
+        msgThink:   ['电脑在思考中…🤔','正在计划下一步…⏳','嗯…🧐'],
+        msgHint:    '💡 提示：试试 {pos}——蓝色标记处！',
+    },
+    ja: {
+        langBtn: '🌐 言語',
+        lmTitle: '🌐 言語を選ぶ',
+        badge: '✨ 五目並べ戦略ゲーム',
+        title: 'こども五目並べ 🎯',
+        sub:   '五目並べて先に勝とう！',
+        r1t:'目的',         r1d:'横・縦・斜めに五目並べると勝ちです！',
+        r2t:'黒番先手',     r2d:'あなたは黒番で最初に打ちます！交点をクリックして石を置こう。',
+        r3t:'交互に置く',   r3d:'交互に一個ずつ石を置きます。一度置いた石は動かせません。',
+        r4t:'ゲーム終了',   r4d:'横・縦・斜めに五目（以上）並べた方の勝ちです！',
+        playBtn:'はじめる！🚀',
+        lvTitle:'🎮 レベルを選ぼう', lvSub:'自分のレベルに合った難しさを選んでね！',
+        lv1n:'かんたん',  lv1w:'五目並べはじめて？<br>ここからスタート！',  lv1b:'15 × 15 盤',
+        lv2n:'ふつう',    lv2w:'少し経験がある？<br>挑戦してみよう！',      lv2b:'15 × 15 盤',
+        lv3n:'むずかしい',lv3w:'コンピュータに<br>挑戦しよう！',            lv3b:'15 × 15 盤',
+        lvBack:'← 戻る',
+        spPlayers:'プレイヤー',
+        pYou:'あなた（黒）', pCpu:'コンピュータ（白）',
+        pYouStones:'置いた石：', pCpuStones:'置いた石：',
+        btnHint:'ヒントを見る', btnRules:'ルール確認', btnBack:'レベル変更',
+        turnYou:'あなたの番（黒）', turnCpu:'コンピュータの番（白）', turnThink:'考え中…（白）',
+        rmTitle:'📖 五目並べのルール', rmSub:'60秒で五目並べを学ぼう！',
+        rm1t:'交点に石を置く',      rm1d:'線が交わる点をクリック。一度置いた石は動かせません。',
+        rm2t:'五目並べると勝ち',    rm2d:'横・縦・斜めに五目並べると勝ちです！',
+        rm3t:'黒番が先に打つ',      rm3d:'あなたは黒番で、毎局最初に打ちます。',
+        rm4t:'相手を阻止する',      rm4d:'コンピュータに五目並べさせないようにしよう！',
+        rmClose:'わかった！遊ぼう 🎉',
+        resReplay:'🔄 もう一度', resLevel:'🎮 レベル変更',
+        winTitle:'あなたの勝ち！🏆', winMsg:'やった！五目並べました！🌟',
+        loseTitle:'コンピュータの勝ち！', loseMsg:'あきらめないで！次は勝てます！💪',
+        msgStart:'交点をクリックして石を置いてね！😊',
+        msgYourTurn:['どこに置く？🤔','よく考えて… 😊','あなたの番！💪','がんばって！⭐'],
+        msgGood:    ['いい手！✨','うまい！👍','素晴らしい！🌟','賢い！🧠'],
+        msgThink:   ['コンピュータが考え中…🤔','次の手を計画中…⏳','うーん…🧐'],
+        msgHint:    '💡 ヒント：{pos} に置いてみよう（青マーク）！',
+    },
+    es: {
+        langBtn: '🌐 Idioma',
+        lmTitle: '🌐 Elegir Idioma',
+        badge: '✨ Juego de Estrategia Cinco en Raya',
+        title: 'Gomoku para Niños 🎯',
+        sub:   '¡Conecta cinco fichas seguidas para ganar!',
+        r1t:'El Objetivo',        r1d:'¡Sé el primero en conseguir cinco fichas seguidas en horizontal, vertical o diagonal!',
+        r2t:'Las Negras Primero', r2d:'¡Juegas con las Negras y siempre vas primero! Haz clic en cualquier intersección.',
+        r3t:'Por Turnos',         r3d:'Los jugadores alternan colocando una ficha por turno. Las fichas no se mueven.',
+        r4t:'Fin del Juego',      r4d:'¡El primer jugador con cinco o más en fila gana!',
+        playBtn:'¡Jugar! 🚀',
+        lvTitle:'🎮 Elige tu Nivel', lvSub:'¡Elige la dificultad que se adapte a tu habilidad!',
+        lv1n:'Principiante', lv1w:'¿Nuevo en Gomoku?<br>¡Empieza aquí!',  lv1b:'Tablero 15 × 15',
+        lv2n:'Explorador',   lv2w:'¿Ya jugaste antes?<br>¡Prueba esto!',   lv2b:'Tablero 15 × 15',
+        lv3n:'Campeón',      lv3w:'¡Desafía a la<br>computadora!',         lv3b:'Tablero 15 × 15',
+        lvBack:'← Volver',
+        spPlayers:'Jugadores',
+        pYou:'Tú (Negras)', pCpu:'Computadora (Blancas)',
+        pYouStones:'Fichas:', pCpuStones:'Fichas:',
+        btnHint:'Mostrar Pista', btnRules:'Reglas Rápidas', btnBack:'Cambiar Nivel',
+        turnYou:'Tu Turno (Negras)', turnCpu:'Turno de CPU (Blancas)', turnThink:'Pensando… (Blancas)',
+        rmTitle:'📖 Reglas Rápidas', rmSub:'¡Gomoku en 60 segundos!',
+        rm1t:'Coloca fichas en intersecciones', rm1d:'Haz clic donde se cruzan las líneas. Las fichas no se mueven.',
+        rm2t:'Consigue cinco en fila',          rm2d:'¡Conecta cinco fichas horizontal, vertical o diagonalmente!',
+        rm3t:'Las Negras van primero',          rm3d:'Juegas con las Negras y vas primero cada partida.',
+        rm4t:'Bloquea a tu rival',              rm4d:'¡Evita que la computadora consiga cinco en fila!',
+        rmClose:'¡Entendido! ¡A jugar! 🎉',
+        resReplay:'🔄 Jugar de Nuevo', resLevel:'🎮 Cambiar Nivel',
+        winTitle:'¡Ganaste! 🏆',           winMsg:'¡Increíble! ¡Conseguiste cinco en fila! 🌟',
+        loseTitle:'¡Ganó la Computadora!', loseMsg:'¡No te rindas — cada partida te hace más fuerte! 💪',
+        msgStart:'¡Haz clic en una intersección para colocar tu ficha! 😊',
+        msgYourTurn:['Tu turno — ¿adónde vas? 🤔','Piensa con cuidado… 😊','¡Tu movimiento! 💪','¡Tú puedes! ⭐'],
+        msgGood:    ['¡Buen movimiento! ✨','¡Bien jugado! 👍','¡Excelente! 🌟','¡Inteligente! 🧠'],
+        msgThink:   ['La computadora está pensando… 🤔','Planeando el próximo movimiento… ⏳','Hmm… 🧐'],
+        msgHint:    '💡 Pista: prueba en {pos} — ¡marcado en azul!',
+    },
+};
+
+/* ─────────────────────────────────
+   Language helpers
+───────────────────────────────── */
+let lang = 'en';
+function tx(key) { return (T[lang] || T.en)[key] || (T.en[key] || ''); }
+function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function applyLang() {
+    try {
+        const L = T[lang];
+        document.documentElement.lang = lang;
+        document.getElementById('lang-btn').textContent = L.langBtn;
+
+        document.getElementById('i-badge').textContent = L.badge;
+        document.getElementById('i-title').textContent = L.title;
+        document.getElementById('i-sub').textContent   = L.sub;
+        document.getElementById('r1-t').textContent    = L.r1t; document.getElementById('r1-d').textContent = L.r1d;
+        document.getElementById('r2-t').textContent    = L.r2t; document.getElementById('r2-d').textContent = L.r2d;
+        document.getElementById('r3-t').textContent    = L.r3t; document.getElementById('r3-d').textContent = L.r3d;
+        document.getElementById('r4-t').textContent    = L.r4t; document.getElementById('r4-d').textContent = L.r4d;
+        document.getElementById('i-btn').textContent   = L.playBtn;
+
+        document.getElementById('lv-title').textContent   = L.lvTitle;
+        document.getElementById('lv-sub').textContent     = L.lvSub;
+        document.getElementById('lv1-name').textContent   = L.lv1n;
+        document.getElementById('lv1-who').innerHTML      = L.lv1w;
+        document.getElementById('lv1-badge').textContent  = L.lv1b;
+        document.getElementById('lv2-name').textContent   = L.lv2n;
+        document.getElementById('lv2-who').innerHTML      = L.lv2w;
+        document.getElementById('lv2-badge').textContent  = L.lv2b;
+        document.getElementById('lv3-name').textContent   = L.lv3n;
+        document.getElementById('lv3-who').innerHTML      = L.lv3w;
+        document.getElementById('lv3-badge').textContent  = L.lv3b;
+        document.getElementById('lv-back').textContent    = L.lvBack;
+
+        document.getElementById('sp-players').textContent    = L.spPlayers;
+        document.getElementById('p-you').textContent         = L.pYou;
+        document.getElementById('p-cpu').textContent         = L.pCpu;
+        document.getElementById('btn-hint-lbl').textContent  = L.btnHint;
+        document.getElementById('btn-rules-lbl').textContent = L.btnRules;
+        document.getElementById('btn-back-lbl').textContent  = L.btnBack;
+        updateStoneCounts();
+
+        document.getElementById('rm-title').textContent  = L.rmTitle;
+        document.getElementById('rm-sub').textContent    = L.rmSub;
+        document.getElementById('rm1-t').textContent = L.rm1t; document.getElementById('rm1-d').textContent = L.rm1d;
+        document.getElementById('rm2-t').textContent = L.rm2t; document.getElementById('rm2-d').textContent = L.rm2d;
+        document.getElementById('rm3-t').textContent = L.rm3t; document.getElementById('rm3-d').textContent = L.rm3d;
+        document.getElementById('rm4-t').textContent = L.rm4t; document.getElementById('rm4-d').textContent = L.rm4d;
+        document.getElementById('rm-close').textContent  = L.rmClose;
+
+        document.getElementById('res-replay').textContent = L.resReplay;
+        document.getElementById('res-level').textContent  = L.resLevel;
+        document.getElementById('lm-title').textContent   = L.lmTitle;
+
+        ['en','ko','zh','ja','es'].forEach(c => {
+            const el = document.getElementById('lo-' + c);
+            if (el) el.classList.toggle('selected', c === lang);
+        });
+    } catch(e) { console.warn('applyLang error:', e); }
+}
+
+function updateStoneCounts() {
+    const L = T[lang];
+    const sb = stoneCounts ? stoneCounts.black : 0;
+    const sw = stoneCounts ? stoneCounts.white : 0;
+    const youEl = document.getElementById('p-you-stones');
+    const cpuEl = document.getElementById('p-cpu-stones');
+    if (youEl) youEl.innerHTML = L.pYouStones + ' <span id="stones-black">' + sb + '</span>';
+    if (cpuEl) cpuEl.innerHTML = L.pCpuStones + ' <span id="stones-white">' + sw + '</span>';
+}
+
+function setLang(l) {
+    lang = l;
+    applyLang();
+    document.getElementById('lang-modal').classList.remove('show');
+    if (document.getElementById('lang-screen').classList.contains('active')) {
+        showIntroScreen();
+    }
+    document.getElementById('lang-btn').style.display = 'block';
+    document.getElementById('vol-ctrl').style.display = 'flex';
+    syncVolUI();
+}
+
+function openLangModal() { document.getElementById('lang-modal').classList.add('show'); }
+
+document.getElementById('lang-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('show');
+});
+
+/* ─────────────────────────────────
+   Screen Navigation
+───────────────────────────────── */
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+function showIntroScreen()   { showScreen('intro-screen'); }
+function showLevelScreen()   { showScreen('level-screen'); }
+function goToLevelScreen()   { showScreen('level-screen'); }
+function fromResultToLevel() { closeResult(); showScreen('level-screen'); }
+
+/* ─────────────────────────────────
+   Audio Engine
+───────────────────────────────── */
+let audioCtx    = null;
+let masterVolume = 0.7;
+let isMuted      = false;
+let prevVolume   = 0.7;
+
+function getAC() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+
+function vol(scale) { scale = scale === undefined ? 1 : scale; return isMuted ? 0 : masterVolume * scale; }
+
+function tone(f, d, type, scale) {
+    type = type || 'sine'; scale = scale === undefined ? 1 : scale;
+    const v = vol(scale);
+    if (v <= 0) return;
+    try {
+        const ac = getAC(), o = ac.createOscillator(), g = ac.createGain();
+        o.connect(g); g.connect(ac.destination);
+        o.type = type; o.frequency.value = f;
+        g.gain.setValueAtTime(v, ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + d);
+        o.start(); o.stop(ac.currentTime + d);
+    } catch(e) {}
+}
+
+function playStoneClack(scale) {
+    scale = scale === undefined ? 1 : scale;
+    const v = vol(scale);
+    if (v <= 0) return;
+    try {
+        const ac = getAC(), now = ac.currentTime;
+        const SR = ac.sampleRate, bufLen = Math.floor(SR * 0.06);
+        const nBuf = ac.createBuffer(1, bufLen, SR);
+        const data = nBuf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++)
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufLen * 0.12));
+        const nSrc = ac.createBufferSource(); nSrc.buffer = nBuf;
+        const bpf = ac.createBiquadFilter();
+        bpf.type = 'bandpass'; bpf.frequency.value = 1800; bpf.Q.value = 0.8;
+        const nGain = ac.createGain();
+        nGain.gain.setValueAtTime(v * 1.4, now);
+        nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+        nSrc.connect(bpf); bpf.connect(nGain); nGain.connect(ac.destination);
+        nSrc.start(now);
+        const osc = ac.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.14);
+        const oGain = ac.createGain();
+        oGain.gain.setValueAtTime(v * 0.55, now);
+        oGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(oGain); oGain.connect(ac.destination);
+        osc.start(now); osc.stop(now + 0.18);
+    } catch(e) {}
+}
+
+const sfx = {
+    place: function() { playStoneClack(); },
+    bad:   function() { tone(200, 0.1, 'sawtooth', 0.7); },
+    win:   function() { [523,659,784,1047].forEach(function(f,i) { setTimeout(function(){ tone(f,0.25,'sine',1.0); }, i*110); }); },
+    lose:  function() { [440,370,330,262].forEach(function(f,i) { setTimeout(function(){ tone(f,0.22,'sine',0.8); }, i*120); }); },
+};
+
+/* ─────────────────────────────────
+   Volume UI
+───────────────────────────────── */
+function toggleVolPanel() {
+    document.getElementById('vol-panel').classList.toggle('show');
+}
+
+document.addEventListener('click', function(e) {
+    const ctrl = document.getElementById('vol-ctrl');
+    if (ctrl && !ctrl.contains(e.target))
+        document.getElementById('vol-panel').classList.remove('show');
+});
+
+function onSliderInput(val) {
+    isMuted      = false;
+    masterVolume = val / 100;
+    prevVolume   = masterVolume;
+    syncVolUI();
+}
+
+function toggleMute() {
+    if (isMuted) {
+        isMuted      = false;
+        masterVolume = prevVolume > 0 ? prevVolume : 0.5;
+        document.getElementById('vol-slider').value = Math.round(masterVolume * 100);
+    } else {
+        prevVolume   = masterVolume;
+        isMuted      = true;
+        masterVolume = 0;
+    }
+    syncVolUI();
+}
+
+function syncVolUI() {
+    const pct  = Math.round(masterVolume * 100);
+    const icon = (isMuted || pct === 0) ? '🔇' : pct < 35 ? '🔈' : pct < 70 ? '🔉' : '🔊';
+    document.getElementById('vol-icon-btn').textContent = icon;
+    document.getElementById('vol-pct-btn').textContent  = pct + '%';
+    document.getElementById('mute-btn').textContent     = icon;
+    document.getElementById('vol-pct-disp').textContent = pct + '%';
+    document.getElementById('vol-slider').value         = pct;
+    document.getElementById('vol-slider').style.background =
+        'linear-gradient(to right, var(--gold) 0%, var(--gold) ' + pct + '%, rgba(255,255,255,0.2) ' + pct + '%)';
+    document.getElementById('mute-btn').classList.toggle('muted', isMuted || pct === 0);
+}
+
+/* ─────────────────────────────────
+   Particles / Confetti
+───────────────────────────────── */
+const pcvs = document.getElementById('pcvs');
+const pctx = pcvs.getContext('2d');
+let ptls = [];
+
+function resizePcvs() { pcvs.width = innerWidth; pcvs.height = innerHeight; }
+window.addEventListener('resize', resizePcvs); resizePcvs();
+
+function launchConfetti() {
+    ptls = [];
+    const colors = ['#f9a825','#4caf50','#2196f3','#e91e63','#9c27b0','#ff5722','#00bcd4'];
+    for (let i = 0; i < 130; i++) ptls.push({
+        x: Math.random() * pcvs.width, y: -20,
+        vx: (Math.random() - 0.5) * 6, vy: 2 + Math.random() * 5,
+        sz: 6 + Math.random() * 8, color: colors[Math.floor(Math.random() * colors.length)],
+        rot: Math.random() * 360, drot: (Math.random() - 0.5) * 9, alpha: 1
+    });
+    animPtls();
+}
+
+function animPtls() {
+    pctx.clearRect(0, 0, pcvs.width, pcvs.height);
+    ptls = ptls.filter(function(p) { return p.alpha > 0.05 && p.y < pcvs.height + 40; });
+    ptls.forEach(function(p) {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.13; p.rot += p.drot;
+        if (p.y > pcvs.height * 0.6) p.alpha -= 0.018;
+        pctx.save(); pctx.globalAlpha = p.alpha;
+        pctx.translate(p.x, p.y); pctx.rotate(p.rot * Math.PI / 180);
+        pctx.fillStyle = p.color; pctx.fillRect(-p.sz/2, -p.sz/4, p.sz, p.sz/2);
+        pctx.restore();
+    });
+    if (ptls.length) requestAnimationFrame(animPtls);
+    else pctx.clearRect(0, 0, pcvs.width, pcvs.height);
+}
+
+/* ─────────────────────────────────
+   Constants
+───────────────────────────────── */
+const EMPTY = 0, BLACK = 1, WHITE = 2;
+const BS = 15;    // board size
+const CS = 38;    // cell size px
+const COLS = 'ABCDEFGHIJKLMNO';
+
+/* ─────────────────────────────────
+   Game State
+───────────────────────────────── */
+let board, stoneCounts, level, over, aiThinking;
+let lastMove = null, hintCell = null, winLine = null, hoverCell = null;
+let canvas, ctx;
+
+/* ─────────────────────────────────
+   Start / Replay
+───────────────────────────────── */
+function startGame(lv) {
+    level      = lv;
+    board      = [];
+    for (let i = 0; i < BS; i++) {
+        board.push([]);
+        for (let j = 0; j < BS; j++) board[i].push(EMPTY);
+    }
+    stoneCounts = {black: 0, white: 0};
+    over       = false;
+    aiThinking = false;
+    lastMove   = null;
+    hintCell   = null;
+    winLine    = null;
+    hoverCell  = null;
+
+    showScreen('game-screen');
+
+    canvas = document.getElementById('board-canvas');
+    const size = CS * (BS + 1);
+    canvas.width = size; canvas.height = size;
+    ctx = canvas.getContext('2d');
+    canvas.onclick      = onCanvasClick;
+    canvas.onmousemove  = onCanvasHover;
+    canvas.onmouseleave = function() { hoverCell = null; render(); };
+
+    document.getElementById('btn-hint').style.display = (lv === 1) ? 'flex' : 'none';
+    updateStoneCounts();
+    render();
+    setMsg(tx('msgStart'));
+    updateTurnUI(BLACK);
+}
+
+function replayGame()  { closeResult(); startGame(level); }
+function openRules()   { document.getElementById('rules-modal').classList.add('show'); }
+function closeRules()  { document.getElementById('rules-modal').classList.remove('show'); }
+function closeResult() { document.getElementById('result-modal').classList.remove('show'); }
+
+/* ─────────────────────────────────
+   Canvas interaction helpers
+───────────────────────────────── */
+function canvasToCell(e) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * sx, my = (e.clientY - rect.top) * sy;
+    return {
+        x: Math.round((mx - CS) / CS),
+        y: Math.round((my - CS) / CS)
+    };
+}
+
+function onCanvasHover(e) {
+    if (over || aiThinking) { hoverCell = null; render(); return; }
+    const c = canvasToCell(e);
+    if (c.x < 0 || c.x >= BS || c.y < 0 || c.y >= BS || board[c.y][c.x] !== EMPTY)
+        hoverCell = null;
+    else
+        hoverCell = c;
+    render();
+}
+
+/* ─────────────────────────────────
+   Rendering
+───────────────────────────────── */
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Wooden board background
+    const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    bg.addColorStop(0,   '#e8c468');
+    bg.addColorStop(0.5, '#dcb468');
+    bg.addColorStop(1,   '#c8a040');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Hint cell glow
+    if (hintCell) {
+        ctx.save();
+        ctx.shadowColor = '#2196f3'; ctx.shadowBlur = 22;
+        ctx.fillStyle = 'rgba(33,150,243,0.4)';
+        ctx.beginPath();
+        ctx.arc(CS + hintCell.x * CS, CS + hintCell.y * CS, CS * 0.46, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // Last move glow
+    if (lastMove) {
+        ctx.fillStyle = 'rgba(255,100,30,0.18)';
+        ctx.beginPath();
+        ctx.arc(CS + lastMove.x * CS, CS + lastMove.y * CS, CS * 0.46, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Grid lines
+    ctx.strokeStyle = '#7a5a10'; ctx.lineWidth = 1.0;
+    for (let i = 0; i < BS; i++) {
+        ctx.beginPath(); ctx.moveTo(CS + i*CS, CS); ctx.lineTo(CS + i*CS, CS + (BS-1)*CS); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(CS, CS + i*CS); ctx.lineTo(CS + (BS-1)*CS, CS + i*CS); ctx.stroke();
+    }
+
+    // Star points (hoshi)
+    const stars = [[3,3],[11,3],[7,7],[3,11],[11,11]];
+    for (let s = 0; s < stars.length; s++) {
+        const sx = stars[s][0], sy = stars[s][1];
+        ctx.fillStyle = '#6a4a08';
+        ctx.beginPath(); ctx.arc(CS + sx*CS, CS + sy*CS, 4.5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Coordinate labels
+    ctx.fillStyle = 'rgba(80,50,5,0.65)';
+    ctx.font = 'bold ' + Math.round(CS * 0.28) + 'px Segoe UI,Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let i = 0; i < BS; i++) {
+        ctx.fillText(COLS[i],        CS + i * CS, CS * 0.42);
+        ctx.fillText(String(BS - i), CS * 0.40,   CS + i * CS);
+    }
+
+    // Stones
+    for (let y = 0; y < BS; y++)
+        for (let x = 0; x < BS; x++)
+            if (board[y][x] !== EMPTY)
+                drawStone(x, y, board[y][x], lastMove !== null && lastMove.x === x && lastMove.y === y);
+
+    // Win line highlight
+    if (winLine && winLine.length >= 2) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,215,0,0.95)';
+        ctx.lineWidth = 5;
+        ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 14;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(CS + winLine[0].x * CS, CS + winLine[0].y * CS);
+        // find endpoints (min/max in the winning direction)
+        let minX = winLine[0].x, minY = winLine[0].y, maxX = winLine[0].x, maxY = winLine[0].y;
+        for (let i = 1; i < winLine.length; i++) {
+            if (winLine[i].x < minX || winLine[i].y < minY) { minX = winLine[i].x; minY = winLine[i].y; }
+            if (winLine[i].x > maxX || winLine[i].y > maxY) { maxX = winLine[i].x; maxY = winLine[i].y; }
+        }
+        ctx.moveTo(CS + minX * CS, CS + minY * CS);
+        ctx.lineTo(CS + maxX * CS, CS + maxY * CS);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // Hover stone preview (semi-transparent black)
+    if (hoverCell && !over && !aiThinking) {
+        const hx = CS + hoverCell.x * CS, hy = CS + hoverCell.y * CS, r = CS * 0.43;
+        ctx.save();
+        ctx.globalAlpha = 0.40;
+        ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 8;
+        ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 3;
+        const g = ctx.createRadialGradient(hx - r*.3, hy - r*.3, r*.07, hx, hy, r);
+        g.addColorStop(0, '#999'); g.addColorStop(1, '#0a0a0a');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+function drawStone(x, y, color, isLast) {
+    const cx = CS + x * CS, cy = CS + y * CS, r = CS * 0.43;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 9;
+    ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 3;
+    const g = ctx.createRadialGradient(cx - r*.3, cy - r*.3, r*.07, cx, cy, r);
+    if (color === BLACK) { g.addColorStop(0, '#999'); g.addColorStop(1, '#0a0a0a'); }
+    else                 { g.addColorStop(0, '#fff'); g.addColorStop(1, '#bbb'); }
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    if (isLast) {
+        ctx.strokeStyle = (color === BLACK) ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.arc(cx, cy, r * 0.34, 0, Math.PI * 2); ctx.stroke();
+    }
+}
+
+/* ─────────────────────────────────
+   Gomoku Logic
+───────────────────────────────── */
+function inBounds(x, y) { return x >= 0 && x < BS && y >= 0 && y < BS; }
+
+/* Returns winning cells array (5+) or null */
+function checkWin(x, y, color) {
+    const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    for (let d = 0; d < dirs.length; d++) {
+        const dx = dirs[d][0], dy = dirs[d][1];
+        const cells = [{x: x, y: y}];
+        for (let i = 1; i <= 4; i++) {
+            const nx = x + dx*i, ny = y + dy*i;
+            if (!inBounds(nx, ny) || board[ny][nx] !== color) break;
+            cells.push({x: nx, y: ny});
+        }
+        for (let i = 1; i <= 4; i++) {
+            const nx = x - dx*i, ny = y - dy*i;
+            if (!inBounds(nx, ny) || board[ny][nx] !== color) break;
+            cells.push({x: nx, y: ny});
+        }
+        if (cells.length >= 5) return cells;
+    }
+    return null;
+}
+
+/* Evaluate line score for a hypothetical stone at (x,y) */
+function evalLine(x, y, dx, dy, color) {
+    let count = 1, openL = 0, openR = 0;
+    for (let i = 1; i <= 4; i++) {
+        const nx = x + dx*i, ny = y + dy*i;
+        if (!inBounds(nx, ny)) break;
+        if (board[ny][nx] === color) count++;
+        else if (board[ny][nx] === EMPTY) { openR = 1; break; }
+        else break;
+    }
+    for (let i = 1; i <= 4; i++) {
+        const nx = x - dx*i, ny = y - dy*i;
+        if (!inBounds(nx, ny)) break;
+        if (board[ny][nx] === color) count++;
+        else if (board[ny][nx] === EMPTY) { openL = 1; break; }
+        else break;
+    }
+    if (count >= 5) return 1000000;
+    if (count === 4) return (openL + openR >= 1) ? 50000 : 0;
+    if (count === 3) return (openL + openR === 2) ? 5000 : (openL + openR === 1 ? 500 : 0);
+    if (count === 2) return (openL + openR === 2) ? 100  : (openL + openR === 1 ? 10  : 0);
+    return (openL + openR === 2) ? 2 : 0;
+}
+
+function scoreCell(x, y, color) {
+    const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    let s = 0;
+    for (let d = 0; d < dirs.length; d++) s += evalLine(x, y, dirs[d][0], dirs[d][1], color);
+    return s;
+}
+
+/* ─────────────────────────────────
+   AI
+───────────────────────────────── */
+function getCandidates(radius) {
+    const cands = [];
+    let hasAny = false;
+    for (let y = 0; y < BS; y++)
+        for (let x = 0; x < BS; x++) {
+            if (board[y][x] !== EMPTY) { hasAny = true; continue; }
+            let near = false;
+            outer:
+            for (let dy = -radius; dy <= radius; dy++)
+                for (let dx = -radius; dx <= radius; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const nx = x + dx, ny = y + dy;
+                    if (inBounds(nx, ny) && board[ny][nx] !== EMPTY) { near = true; break outer; }
+                }
+            if (near) cands.push({x: x, y: y});
+        }
+    if (!hasAny) return [{x: 7, y: 7}];
+    return cands.length > 0 ? cands : [{x: 7, y: 7}];
+}
+
+function pickAI() {
+    // 1. Win immediately
+    for (let y = 0; y < BS; y++)
+        for (let x = 0; x < BS; x++) {
+            if (board[y][x] !== EMPTY) continue;
+            board[y][x] = WHITE;
+            const win = checkWin(x, y, WHITE);
+            board[y][x] = EMPTY;
+            if (win) return {x: x, y: y};
+        }
+
+    // 2. Block player immediate win
+    for (let y = 0; y < BS; y++)
+        for (let x = 0; x < BS; x++) {
+            if (board[y][x] !== EMPTY) continue;
+            board[y][x] = BLACK;
+            const win = checkWin(x, y, BLACK);
+            board[y][x] = EMPTY;
+            if (win) return {x: x, y: y};
+        }
+
+    // 3. Scored search
+    const radius  = (level === 1) ? 1 : 2;
+    const noise   = (level === 1) ? 250 : (level === 2) ? 80 : 15;
+    const defMult = (level === 1) ? 0.4 : (level === 2) ? 0.9 : 1.5;
+    const cands   = getCandidates(radius);
+
+    let best = -Infinity, mv = null;
+    for (let i = 0; i < cands.length; i++) {
+        const cx = cands[i].x, cy = cands[i].y;
+
+        board[cy][cx] = WHITE;
+        const offScore = scoreCell(cx, cy, WHITE);
+        board[cy][cx] = EMPTY;
+
+        board[cy][cx] = BLACK;
+        const defScore = scoreCell(cx, cy, BLACK);
+        board[cy][cx] = EMPTY;
+
+        const score = offScore + defScore * defMult + Math.random() * noise;
+        if (score > best) { best = score; mv = cands[i]; }
+    }
+    return mv || {x: 7, y: 7};
+}
+
+function runAI() {
+    if (over) return;
+    aiThinking = true;
+    document.getElementById('msg-box').innerHTML =
+        rnd(tx('msgThink')) + '&nbsp;<span class="spinner"></span>';
+    updateTurnUI(WHITE);
+    const delay = (level === 1) ? 400 : (level === 2) ? 600 : 900;
+    setTimeout(function() {
+        const mv = pickAI();
+        board[mv.y][mv.x] = WHITE;
+        stoneCounts.white++;
+        lastMove = mv;
+        sfx.place();
+        const wl = checkWin(mv.x, mv.y, WHITE);
+        render();
+        updateStoneCounts();
+        if (wl) {
+            winLine = wl;
+            render();
+            aiThinking = false;
+            endGame(WHITE);
+            return;
+        }
+        setMsg(rnd(tx('msgYourTurn')));
+        aiThinking = false;
+        updateTurnUI(BLACK);
+    }, delay);
+}
+
+/* ─────────────────────────────────
+   Player Actions
+───────────────────────────────── */
+function onCanvasClick(e) {
+    if (over || aiThinking) return;
+    hintCell = null;
+    const c = canvasToCell(e);
+    if (c.x < 0 || c.x >= BS || c.y < 0 || c.y >= BS) return;
+    if (board[c.y][c.x] !== EMPTY) { sfx.bad(); return; }
+
+    board[c.y][c.x] = BLACK;
+    stoneCounts.black++;
+    lastMove = {x: c.x, y: c.y};
+    sfx.place();
+    const wl = checkWin(c.x, c.y, BLACK);
+    render();
+    updateStoneCounts();
+    updateTurnUI(WHITE);
+
+    if (wl) {
+        winLine = wl;
+        render();
+        endGame(BLACK);
+        return;
+    }
+    setMsg(rnd(tx('msgGood')));
+    runAI();
+}
+
+function showHint() {
+    if (over || aiThinking) return;
+    // Check winning move first
+    for (let y = 0; y < BS; y++)
+        for (let x = 0; x < BS; x++) {
+            if (board[y][x] !== EMPTY) continue;
+            board[y][x] = BLACK;
+            const win = checkWin(x, y, BLACK);
+            board[y][x] = EMPTY;
+            if (win) { showHintAt(x, y); return; }
+        }
+    // Block AI win
+    for (let y = 0; y < BS; y++)
+        for (let x = 0; x < BS; x++) {
+            if (board[y][x] !== EMPTY) continue;
+            board[y][x] = WHITE;
+            const win = checkWin(x, y, WHITE);
+            board[y][x] = EMPTY;
+            if (win) { showHintAt(x, y); return; }
+        }
+    // Scored best for BLACK
+    const cands = getCandidates(2);
+    let best = -Infinity, mv = null;
+    for (let i = 0; i < cands.length; i++) {
+        const cx = cands[i].x, cy = cands[i].y;
+        board[cy][cx] = BLACK;
+        const s = scoreCell(cx, cy, BLACK);
+        board[cy][cx] = EMPTY;
+        if (s > best) { best = s; mv = cands[i]; }
+    }
+    if (mv) showHintAt(mv.x, mv.y);
+}
+
+function showHintAt(x, y) {
+    hintCell = {x: x, y: y};
+    render();
+    setMsg(tx('msgHint').replace('{pos}', COLS[x] + (BS - y)));
+}
+
+/* ─────────────────────────────────
+   End Game
+───────────────────────────────── */
+function endGame(winner) {
+    over = true;
+    if (winner === BLACK) {
+        sfx.win(); launchConfetti();
+        document.getElementById('res-emoji').textContent = '🏆';
+        document.getElementById('res-title').textContent = tx('winTitle');
+        document.getElementById('res-msg').textContent   = tx('winMsg');
+    } else {
+        sfx.lose();
+        document.getElementById('res-emoji').textContent = '🤖';
+        document.getElementById('res-title').textContent = tx('loseTitle');
+        document.getElementById('res-msg').textContent   = tx('loseMsg');
+    }
+    setTimeout(function() {
+        document.getElementById('result-modal').classList.add('show');
+    }, 900);
+}
+
+/* ─────────────────────────────────
+   UI Helpers
+───────────────────────────────── */
+function setMsg(html) { document.getElementById('msg-box').innerHTML = html; }
+
+function updateTurnUI(color) {
+    updateStoneCounts();
+    const cb  = document.getElementById('card-black');
+    const cw  = document.getElementById('card-white');
+    const dot = document.getElementById('turn-dot');
+    const txt = document.getElementById('turn-text');
+    if (color === BLACK) {
+        cb.classList.add('active-turn');    cw.classList.remove('active-turn');
+        dot.className = 'turn-dot black';
+        txt.textContent = tx('turnYou');
+    } else {
+        cw.classList.add('active-turn');    cb.classList.remove('active-turn');
+        dot.className = 'turn-dot white';
+        txt.textContent = aiThinking ? tx('turnThink') : tx('turnCpu');
+    }
+}
+
+/* ─────────────────────────────────
+   Init
+───────────────────────────────── */
+applyLang();
+</script>
+</body>
+</html>

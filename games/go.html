@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Go — 어린이 바둑 — 儿童围棋</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green:#4caf50; --orange:#ff9800; --red:#f44336;
+            --blue:#2196f3; --purple:#9c27b0; --gold:#ffc107;
+        }
+
+        body {
+            font-family: 'Segoe UI','Helvetica Neue',Arial,
+                         'Apple SD Gothic Neo','Malgun Gothic',
+                         'PingFang SC','Microsoft YaHei',
+                         'Hiragino Sans','Meiryo', sans-serif;
+            background: linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        /* ── screens ── */
+        .screen { display:none; }
+        .screen.active { display:flex; flex-direction:column; align-items:center; }
+
+        /* ── language flag button (persistent) ── */
+        #lang-btn {
+            position: fixed;
+            top: 14px; right: 16px;
+            z-index: 400;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            border-radius: 50px;
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: background 0.2s;
+            display: none; /* shown after language chosen */
+        }
+        #lang-btn:hover { background: rgba(255,255,255,0.25); }
+
+        /* ── Volume control ── */
+        #vol-ctrl {
+            position: fixed;
+            top: 14px; left: 16px;
+            z-index: 400;
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        #vol-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            border-radius: 50px;
+            padding: 6px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        #vol-btn:hover { background: rgba(255,255,255,0.25); }
+
+        #vol-panel {
+            display: none;
+            background: rgba(15,25,45,0.92);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 16px;
+            padding: 14px 16px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+            width: 200px;
+            flex-direction: column;
+            gap: 12px;
+        }
+        #vol-panel.show { display: flex; }
+
+        .vol-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #mute-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            line-height: 1;
+        }
+        #mute-btn:hover { background: rgba(255,255,255,0.22); }
+        #mute-btn.muted { background: rgba(244,67,54,0.25); border-color: rgba(244,67,54,0.5); }
+
+        #vol-pct-disp {
+            color: var(--gold);
+            font-size: 0.82rem;
+            font-weight: 700;
+            min-width: 34px;
+            text-align: right;
+        }
+
+        /* Range slider */
+        #vol-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            background: linear-gradient(to right, var(--gold) 0%, var(--gold) 70%, rgba(255,255,255,0.2) 70%);
+        }
+        #vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--gold);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        #vol-slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
+        #vol-slider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%; border: none;
+            background: var(--gold);
+            cursor: pointer;
+        }
+
+        /* ══════════════════════════
+           LANGUAGE SELECT SCREEN
+        ══════════════════════════ */
+        #lang-screen {
+            text-align: center;
+            color: white;
+            gap: 0;
+        }
+
+        .lang-title {
+            font-size: clamp(2rem,6vw,3.2rem);
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg,#fff 30%,#ffd54f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .lang-sub {
+            font-size: 1rem;
+            opacity: 0.7;
+            margin-bottom: 38px;
+        }
+
+        .lang-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: center;
+        }
+
+        .lang-card {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 22px 28px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s, border-color 0.2s;
+            min-width: 140px;
+            text-align: center;
+        }
+        .lang-card:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: var(--gold);
+            transform: translateY(-5px) scale(1.04);
+        }
+        .lang-flag  { font-size: 3rem; margin-bottom: 8px; }
+        .lang-name  { font-size: 1.1rem; font-weight: 800; color: white; }
+        .lang-native{ font-size: 0.85rem; color: rgba(255,255,255,0.65); margin-top: 4px; }
+
+        /* ══════════════════════════
+           INTRO / SPLASH
+        ══════════════════════════ */
+        #intro-screen { text-align:center; color:white; max-width:720px; width:100%; gap:0; }
+
+        .splash-badge {
+            display:inline-block;
+            background:rgba(255,215,0,0.15);
+            border:2px solid var(--gold);
+            border-radius:50px;
+            padding:6px 18px;
+            font-size:0.82rem;
+            color:var(--gold);
+            letter-spacing:2px;
+            text-transform:uppercase;
+            margin-bottom:16px;
+        }
+        .splash-title {
+            font-size: clamp(2.2rem,6vw,3.8rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg,#fff 30%,#ffd54f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .splash-sub { font-size:1rem; opacity:0.75; margin-bottom:34px; }
+
+        .rule-cards {
+            display:grid;
+            grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+            gap:14px;
+            margin-bottom:36px;
+            width:100%;
+        }
+        .rule-card {
+            background:rgba(255,255,255,0.08);
+            border:1px solid rgba(255,255,255,0.15);
+            border-radius:18px;
+            padding:20px 16px;
+            text-align:center;
+            backdrop-filter:blur(6px);
+        }
+        .rule-icon  { font-size:2.4rem; margin-bottom:8px; }
+        .rule-title { font-size:0.95rem; font-weight:700; color:var(--gold); margin-bottom:6px; }
+        .rule-text  { font-size:0.8rem; opacity:0.8; line-height:1.5; }
+
+        .btn-play-now {
+            display:inline-flex; align-items:center; gap:10px;
+            background:linear-gradient(135deg,#f9a825,#f57f17);
+            color:white; border:none; border-radius:50px;
+            padding:16px 40px; font-size:1.2rem; font-weight:800;
+            cursor:pointer; box-shadow:0 6px 24px rgba(245,127,23,0.5);
+            transition:transform 0.15s,box-shadow 0.15s; letter-spacing:0.5px;
+        }
+        .btn-play-now:hover { transform:translateY(-3px) scale(1.03); box-shadow:0 10px 32px rgba(245,127,23,0.65); }
+
+        /* ══════════════════════════
+           LEVEL SELECT
+        ══════════════════════════ */
+        #level-screen { text-align:center; color:white; gap:0; }
+        .level-title  { font-size:clamp(1.8rem,5vw,2.6rem); font-weight:900; margin-bottom:8px; color:white; }
+        .level-subtitle { font-size:1rem; opacity:0.7; margin-bottom:36px; }
+
+        .level-cards { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:28px; }
+
+        .lv-card {
+            background:white; border-radius:24px; padding:26px 28px;
+            cursor:pointer; transition:transform 0.2s,box-shadow 0.2s;
+            box-shadow:0 8px 32px rgba(0,0,0,0.4); min-width:155px;
+            border:3px solid transparent; text-align:center;
+            position:relative; overflow:hidden;
+        }
+        .lv-card::before { content:''; position:absolute; top:0;left:0;right:0; height:5px; }
+        .lv-card.easy::before { background:var(--green); }
+        .lv-card.mid::before  { background:var(--orange); }
+        .lv-card.hard::before { background:var(--red); }
+        .lv-card:hover { transform:translateY(-8px) scale(1.04); box-shadow:0 18px 50px rgba(0,0,0,0.5); }
+        .lv-card.easy:hover { border-color:var(--green); }
+        .lv-card.mid:hover  { border-color:var(--orange); }
+        .lv-card.hard:hover { border-color:var(--red); }
+
+        .lv-emoji { font-size:3rem; margin-bottom:8px; }
+        .lv-name  { font-size:1.4rem; font-weight:800; color:#222; }
+        .lv-who   { font-size:0.8rem; color:#777; margin:6px 0 10px; line-height:1.4; }
+        .lv-badge { display:inline-block; padding:3px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; color:white; }
+        .easy .lv-badge { background:var(--green); }
+        .mid  .lv-badge { background:var(--orange); }
+        .hard .lv-badge { background:var(--red); }
+
+        .btn-back-small {
+            background:transparent; border:1px solid rgba(255,255,255,0.3);
+            color:rgba(255,255,255,0.7); border-radius:50px;
+            padding:8px 20px; cursor:pointer; font-size:0.9rem; transition:all 0.2s;
+        }
+        .btn-back-small:hover { background:rgba(255,255,255,0.1); color:white; }
+
+        /* ══════════════════════════
+           GAME SCREEN
+        ══════════════════════════ */
+        #game-screen { gap:12px; }
+
+        .turn-bar {
+            background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2);
+            border-radius:50px; padding:8px 22px; color:white;
+            font-size:1rem; font-weight:700; display:flex; align-items:center; gap:10px;
+            backdrop-filter:blur(8px);
+        }
+        .turn-dot { width:18px; height:18px; border-radius:50%; transition:background 0.3s; }
+        .turn-dot.black { background:radial-gradient(circle at 35% 35%,#888,#111); box-shadow:0 0 8px rgba(255,255,255,0.2); }
+        .turn-dot.white { background:radial-gradient(circle at 35% 35%,#fff,#ccc); box-shadow:0 0 8px rgba(255,255,255,0.6); }
+
+        .game-row { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+
+        .board-wrapper {
+            background:#b8891a; border-radius:14px; padding:12px;
+            box-shadow:0 10px 40px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        canvas { display:block; border-radius:6px; cursor:pointer; }
+
+        .side-panel {
+            background:rgba(255,255,255,0.97); border-radius:20px; padding:16px;
+            width:215px; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+            display:flex; flex-direction:column; gap:9px;
+        }
+        .panel-title { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#aaa; }
+
+        .player-card {
+            display:flex; align-items:center; gap:10px; padding:10px 12px;
+            border-radius:14px; border:2px solid #eee; transition:all 0.25s; background:#fafafa;
+        }
+        .player-card.active-turn {
+            border-color:var(--green); background:#f1fdf4;
+            box-shadow:0 0 0 3px rgba(76,175,80,0.15);
+        }
+        .stone-badge { width:34px; height:34px; border-radius:50%; flex-shrink:0; box-shadow:2px 3px 8px rgba(0,0,0,0.35); }
+        .stone-badge.black { background:radial-gradient(circle at 35% 35%,#888,#111); }
+        .stone-badge.white { background:radial-gradient(circle at 35% 35%,#fff,#bbb); border:2px solid #ccc; }
+        .p-name  { font-size:0.88rem; font-weight:700; color:#222; }
+        .p-score { font-size:0.78rem; color:#777; }
+        .p-score span { font-weight:700; color:#333; }
+
+        .divider { border:none; border-top:1px solid #ececec; margin:2px 0; }
+
+        #msg-box {
+            background:#fffde7; border-left:4px solid var(--gold); border-radius:0 12px 12px 0;
+            padding:10px 12px; font-size:0.86rem; font-weight:600; color:#4a3800;
+            min-height:52px; display:flex; align-items:center; line-height:1.45;
+        }
+
+        .score-strip { display:flex; gap:8px; }
+        .score-pill  { flex:1; background:#f5f5f5; border-radius:10px; padding:8px 6px; text-align:center; }
+        .score-pill .sp-label { font-size:0.62rem; color:#aaa; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+        .score-pill .sp-val   { font-size:1.3rem; font-weight:900; color:#222; line-height:1.2; }
+        .score-pill.white-pill .sp-val { color:#888; }
+
+        .btn {
+            display:flex; align-items:center; justify-content:center; gap:6px;
+            width:100%; padding:10px; border:none; border-radius:12px;
+            font-size:0.88rem; font-weight:700; cursor:pointer;
+            transition:filter 0.15s,transform 0.1s;
+        }
+        .btn:hover  { filter:brightness(1.1); transform:translateY(-1px); }
+        .btn:active { transform:translateY(1px); }
+        .btn-hint  { background:var(--blue);   color:white; }
+        .btn-pass  { background:var(--orange);  color:white; }
+        .btn-rules { background:var(--purple);  color:white; }
+        .btn-back  { background:#78909c;        color:white; font-size:0.8rem; padding:8px; }
+
+        /* ── Modals ── */
+        .overlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.72); z-index:300;
+            align-items:center; justify-content:center; padding:16px;
+        }
+        .overlay.show { display:flex; }
+        .modal-box {
+            background:white; border-radius:24px; padding:30px 26px;
+            max-width:480px; width:100%;
+            box-shadow:0 24px 72px rgba(0,0,0,0.6);
+            animation:pop 0.28s cubic-bezier(.34,1.56,.64,1);
+            max-height:90vh; overflow-y:auto;
+        }
+        @keyframes pop {
+            from { transform:scale(0.7); opacity:0; }
+            to   { transform:scale(1);   opacity:1; }
+        }
+
+        /* Language modal */
+        #lang-modal .modal-box { text-align:center; }
+        .lang-modal-title { font-size:1.5rem; font-weight:800; color:#222; margin-bottom:18px; }
+        .lang-modal-grid  { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+        .lang-opt {
+            background:#f5f5f5; border:2px solid #eee; border-radius:14px;
+            padding:12px 16px; cursor:pointer; text-align:center; min-width:110px;
+            transition:all 0.2s; font-size:0.9rem; font-weight:700; color:#333;
+        }
+        .lang-opt:hover { border-color:var(--gold); background:#fff8e1; }
+        .lang-opt.selected { border-color:var(--green); background:#f1fdf4; color:#1b5e20; }
+        .lang-opt .lf { font-size:1.8rem; display:block; margin-bottom:4px; }
+
+        /* Rules modal */
+        #rules-modal .modal-box { text-align:left; }
+        .rules-title { font-size:1.5rem; font-weight:800; color:#222; margin-bottom:4px; }
+        .rules-sub   { font-size:0.85rem; color:#888; margin-bottom:18px; }
+        .rule-row    { display:flex; gap:12px; align-items:flex-start; margin-bottom:14px; }
+        .rule-num {
+            width:28px; height:28px; min-width:28px; border-radius:50%;
+            background:linear-gradient(135deg,#f9a825,#f57f17);
+            color:white; font-weight:800; display:flex; align-items:center; justify-content:center; font-size:0.85rem;
+        }
+        .rule-body strong { font-size:0.92rem; color:#222; display:block; margin-bottom:3px; }
+        .rule-body p      { font-size:0.8rem; color:#555; line-height:1.5; }
+        .btn-close-rules {
+            background:var(--green); color:white; margin-top:18px; padding:12px;
+            border-radius:12px; font-size:0.95rem; font-weight:700;
+            border:none; cursor:pointer; width:100%;
+        }
+
+        /* Result modal */
+        #result-modal .modal-box { text-align:center; }
+        .res-emoji  { font-size:4rem; margin-bottom:8px; }
+        .res-title  { font-size:1.9rem; font-weight:900; color:#222; margin-bottom:6px; }
+        .res-msg    { font-size:0.95rem; color:#555; margin-bottom:16px; }
+        .score-table { width:100%; border-collapse:collapse; margin-bottom:18px; }
+        .score-table th { font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:#aaa; padding:5px 6px; }
+        .score-table td { padding:9px 6px; font-size:0.95rem; border-top:1px solid #f0f0f0; }
+        .score-table .winner-row td { background:#f9fbe7; font-weight:700; color:#33691e; }
+        .stone-cell { display:flex; align-items:center; gap:7px; }
+        .mini-stone { width:18px; height:18px; border-radius:50%; flex-shrink:0; }
+        .mini-stone.b { background:radial-gradient(circle at 35% 35%,#888,#111); }
+        .mini-stone.w { background:radial-gradient(circle at 35% 35%,#fff,#bbb); border:1px solid #ccc; }
+        .modal-btns { display:flex; gap:10px; flex-direction:column; }
+        .btn-replay { background:var(--green); color:white; padding:12px; border-radius:12px; font-size:0.95rem; font-weight:700; border:none; cursor:pointer; }
+        .btn-level  { background:#607d8b;      color:white; padding:12px; border-radius:12px; font-size:0.95rem; font-weight:700; border:none; cursor:pointer; }
+
+        /* ── Particles ── */
+        #pcvs { position:fixed; inset:0; pointer-events:none; z-index:250; }
+
+        /* ── Spinner ── */
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .spinner {
+            display:inline-block; width:13px; height:13px;
+            border:2px solid rgba(255,152,0,0.3); border-top-color:#ff9800;
+            border-radius:50%; animation:spin 0.8s linear infinite;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width:600px) {
+            .side-panel { width:100%; max-width:380px; }
+            .game-row   { flex-direction:column; align-items:center; }
+            .rule-cards { grid-template-columns:1fr 1fr; }
+            .lang-grid  { gap:10px; }
+            .lang-card  { min-width:120px; padding:18px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- persistent language button -->
+<button id="lang-btn" onclick="openLangModal()">🌐 Language</button>
+
+<!-- Volume control -->
+<div id="vol-ctrl">
+    <button id="vol-btn" onclick="toggleVolPanel()">
+        <span id="vol-icon-btn">🔊</span>
+        <span id="vol-pct-btn">70%</span>
+    </button>
+    <div id="vol-panel">
+        <div class="vol-row">
+            <button id="mute-btn" onclick="toggleMute()" title="Mute / Unmute">🔊</button>
+            <input type="range" id="vol-slider" min="0" max="100" value="70"
+                   oninput="onSliderInput(this.value)">
+            <span id="vol-pct-disp">70%</span>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ LANGUAGE SELECT (first screen) ═══════ -->
+<div id="lang-screen" class="screen active">
+    <div class="lang-title">🌍 Kids Go</div>
+    <div class="lang-sub">Choose your language • 언어 선택 • 选择语言 • 言語を選ぶ • Elige idioma</div>
+    <div class="lang-grid">
+        <div class="lang-card" onclick="setLang('en')">
+            <div class="lang-flag">🇺🇸</div>
+            <div class="lang-name">English</div>
+            <div class="lang-native">English</div>
+        </div>
+        <div class="lang-card" onclick="setLang('ko')">
+            <div class="lang-flag">🇰🇷</div>
+            <div class="lang-name">한국어</div>
+            <div class="lang-native">Korean</div>
+        </div>
+        <div class="lang-card" onclick="setLang('zh')">
+            <div class="lang-flag">🇨🇳</div>
+            <div class="lang-name">中文</div>
+            <div class="lang-native">Chinese</div>
+        </div>
+        <div class="lang-card" onclick="setLang('ja')">
+            <div class="lang-flag">🇯🇵</div>
+            <div class="lang-name">日本語</div>
+            <div class="lang-native">Japanese</div>
+        </div>
+        <div class="lang-card" onclick="setLang('es')">
+            <div class="lang-flag">🇪🇸</div>
+            <div class="lang-name">Español</div>
+            <div class="lang-native">Spanish</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ INTRO SCREEN ═══════ -->
+<div id="intro-screen" class="screen">
+    <div class="splash-badge" id="i-badge">✨ Ancient Strategy Game</div>
+    <div class="splash-title" id="i-title">Kids Go 🪨</div>
+    <div class="splash-sub"   id="i-sub">Learn the 4,000-year-old game of Go!</div>
+
+    <div class="rule-cards">
+        <div class="rule-card">
+            <div class="rule-icon">🎯</div>
+            <div class="rule-title" id="r1-t">The Goal</div>
+            <div class="rule-text"  id="r1-d">Claim more territory than your opponent by placing stones on the board.</div>
+        </div>
+        <div class="rule-card">
+            <div class="rule-icon">🔄</div>
+            <div class="rule-title" id="r2-t">Take Turns</div>
+            <div class="rule-text"  id="r2-d">You play Black and go first! Click any intersection on the grid.</div>
+        </div>
+        <div class="rule-card">
+            <div class="rule-icon">⚡</div>
+            <div class="rule-title" id="r3-t">Capture Stones</div>
+            <div class="rule-text"  id="r3-d">Surround an opponent's stone or group completely to capture it!</div>
+        </div>
+        <div class="rule-card">
+            <div class="rule-icon">🏁</div>
+            <div class="rule-title" id="r4-t">Game Over</div>
+            <div class="rule-text"  id="r4-d">When both players pass, count territory + captures. Most points wins!</div>
+        </div>
+    </div>
+
+    <button class="btn-play-now" id="i-btn" onclick="showLevelScreen()">Let's Play! 🚀</button>
+</div>
+
+<!-- ═══════ LEVEL SCREEN ═══════ -->
+<div id="level-screen" class="screen">
+    <div class="level-title"    id="lv-title">🎮 Choose Your Level</div>
+    <div class="level-subtitle" id="lv-sub">Pick a board size that matches your skill!</div>
+
+    <div class="level-cards">
+        <div class="lv-card easy" onclick="startGame(1)">
+            <div class="lv-emoji">🐣</div>
+            <div class="lv-name" id="lv1-name">Beginner</div>
+            <div class="lv-who"  id="lv1-who">Brand new to Go?<br>Start here!</div>
+            <span class="lv-badge" id="lv1-badge">5 × 5 Board</span>
+        </div>
+        <div class="lv-card mid" onclick="startGame(2)">
+            <div class="lv-emoji">🐥</div>
+            <div class="lv-name" id="lv2-name">Explorer</div>
+            <div class="lv-who"  id="lv2-who">Played a few times?<br>Try this!</div>
+            <span class="lv-badge" id="lv2-badge">7 × 7 Board</span>
+        </div>
+        <div class="lv-card hard" onclick="startGame(3)">
+            <div class="lv-emoji">🦅</div>
+            <div class="lv-name" id="lv3-name">Advanced</div>
+            <div class="lv-who"  id="lv3-who">Feeling confident?<br>Standard board!</div>
+            <span class="lv-badge" id="lv3-badge">9 × 9 Board</span>
+        </div>
+    </div>
+
+    <button class="btn-back-small" id="lv-back" onclick="showIntroScreen()">← Back</button>
+</div>
+
+<!-- ═══════ GAME SCREEN ═══════ -->
+<div id="game-screen" class="screen">
+    <div class="turn-bar">
+        <div class="turn-dot black" id="turn-dot"></div>
+        <span id="turn-text">Your Turn (Black)</span>
+    </div>
+
+    <div class="game-row">
+        <div class="board-wrapper">
+            <canvas id="board-canvas"></canvas>
+        </div>
+
+        <div class="side-panel">
+            <div class="panel-title" id="sp-players">Players</div>
+            <div class="player-card active-turn" id="card-black">
+                <div class="stone-badge black"></div>
+                <div>
+                    <div class="p-name" id="p-you">You (Black)</div>
+                    <div class="p-score" id="p-you-cap">Captured: <span id="cap-black">0</span></div>
+                </div>
+            </div>
+            <div class="player-card" id="card-white">
+                <div class="stone-badge white"></div>
+                <div>
+                    <div class="p-name" id="p-cpu">Computer (White)</div>
+                    <div class="p-score" id="p-cpu-cap">Captured: <span id="cap-white">0</span></div>
+                </div>
+            </div>
+
+            <hr class="divider">
+            <div class="panel-title" id="sp-score">Score (Territory)</div>
+            <div class="score-strip">
+                <div class="score-pill black-pill">
+                    <div class="sp-label" id="sp-you-lbl">You</div>
+                    <div class="sp-val" id="terr-black">–</div>
+                </div>
+                <div class="score-pill white-pill">
+                    <div class="sp-label" id="sp-cpu-lbl">CPU</div>
+                    <div class="sp-val" id="terr-white">–</div>
+                </div>
+            </div>
+            <hr class="divider">
+
+            <div id="msg-box">Click any intersection to place your stone! 😊</div>
+
+            <button class="btn btn-hint"  id="btn-hint"  onclick="showHint()">💡 <span id="btn-hint-lbl">Show Hint</span></button>
+            <button class="btn btn-rules" onclick="openRules()">📖 <span id="btn-rules-lbl">Quick Rules</span></button>
+            <button class="btn btn-pass"  onclick="playerPass()">✋ <span id="btn-pass-lbl">Pass Turn</span></button>
+            <button class="btn btn-back"  onclick="goToLevelScreen()">← <span id="btn-back-lbl">Change Level</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ LANGUAGE MODAL ═══════ -->
+<div id="lang-modal" class="overlay">
+    <div class="modal-box">
+        <div class="lang-modal-title" id="lm-title">🌐 Choose Language</div>
+        <div class="lang-modal-grid">
+            <div class="lang-opt" id="lo-en" onclick="setLang('en')"><span class="lf">🇺🇸</span>English</div>
+            <div class="lang-opt" id="lo-ko" onclick="setLang('ko')"><span class="lf">🇰🇷</span>한국어</div>
+            <div class="lang-opt" id="lo-zh" onclick="setLang('zh')"><span class="lf">🇨🇳</span>中文</div>
+            <div class="lang-opt" id="lo-ja" onclick="setLang('ja')"><span class="lf">🇯🇵</span>日本語</div>
+            <div class="lang-opt" id="lo-es" onclick="setLang('es')"><span class="lf">🇪🇸</span>Español</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ RULES MODAL ═══════ -->
+<div id="rules-modal" class="overlay">
+    <div class="modal-box">
+        <div class="rules-title" id="rm-title">📖 Quick Rules</div>
+        <div class="rules-sub"   id="rm-sub">Go in 60 seconds!</div>
+        <div class="rule-row"><div class="rule-num">1</div><div class="rule-body"><strong id="rm1-t">Place stones on intersections</strong><p id="rm1-d">Click any dot where lines cross. Stones stay put once placed.</p></div></div>
+        <div class="rule-row"><div class="rule-num">2</div><div class="rule-body"><strong id="rm2-t">Liberties keep stones alive</strong><p id="rm2-d">Surround all neighbor spaces of an enemy group to capture it!</p></div></div>
+        <div class="rule-row"><div class="rule-num">3</div><div class="rule-body"><strong id="rm3-t">No suicide moves</strong><p id="rm3-d">You can't place a stone with zero liberties unless it captures an enemy group.</p></div></div>
+        <div class="rule-row"><div class="rule-num">4</div><div class="rule-body"><strong id="rm4-t">Ko rule</strong><p id="rm4-d">You can't immediately recapture the exact stone just taken.</p></div></div>
+        <div class="rule-row"><div class="rule-num">5</div><div class="rule-body"><strong id="rm5-t">Score = Territory + Captures</strong><p id="rm5-d">Most points wins! 🏆</p></div></div>
+        <button class="btn-close-rules" id="rm-close" onclick="closeRules()">Got it! Let's play 🎉</button>
+    </div>
+</div>
+
+<!-- ═══════ RESULT MODAL ═══════ -->
+<div id="result-modal" class="overlay">
+    <div class="modal-box">
+        <div class="res-emoji" id="res-emoji">🏆</div>
+        <div class="res-title"  id="res-title">Game Over!</div>
+        <div class="res-msg"    id="res-msg"></div>
+        <table class="score-table">
+            <thead><tr>
+                <th id="th-player">Player</th>
+                <th id="th-terr">Territory</th>
+                <th id="th-cap">Captures</th>
+                <th id="th-total">Total</th>
+            </tr></thead>
+            <tbody>
+                <tr id="row-black">
+                    <td><div class="stone-cell"><div class="mini-stone b"></div> <span id="rt-you-lbl">You</span></div></td>
+                    <td id="rt-black">0</td><td id="rc-black">0</td><td id="rs-black"><b>0</b></td>
+                </tr>
+                <tr id="row-white">
+                    <td><div class="stone-cell"><div class="mini-stone w"></div> <span id="rt-cpu-lbl">CPU</span></div></td>
+                    <td id="rt-white">0</td><td id="rc-white">0</td><td id="rs-white"><b>0</b></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="modal-btns">
+            <button class="btn-replay" id="res-replay" onclick="replayGame()">🔄 Play Again</button>
+            <button class="btn-level"  id="res-level"  onclick="fromResultToLevel()">🎮 Change Level</button>
+        </div>
+    </div>
+</div>
+
+<canvas id="pcvs"></canvas>
+
+<!-- ═══════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════ -->
+<script>
+/* ─────────────────────────────────
+   I18N Translations
+───────────────────────────────── */
+const T = {
+    en: {
+        langBtn: '🌐 Language',
+        lmTitle: '🌐 Choose Language',
+        /* intro */
+        badge: '✨ Ancient Strategy Game',
+        title: 'Kids Go 🪨',
+        sub:   'Learn the 4,000-year-old game of Go — simple to start, amazing to master!',
+        r1t:'The Goal',         r1d:'Claim more territory than your opponent by placing stones on the board.',
+        r2t:'Take Turns',       r2d:'You play Black and go first! Click any intersection on the grid.',
+        r3t:'Capture Stones',   r3d:"Surround an opponent's stone or group completely to capture it!",
+        r4t:'Game Over',        r4d:'When both players pass, count territory + captures. Most points wins!',
+        playBtn: "Let's Play! 🚀",
+        /* level */
+        lvTitle:'🎮 Choose Your Level', lvSub:'Pick a board size that matches your skill!',
+        lv1n:'Beginner',  lv1w:'Brand new to Go?<br>Start here!',     lv1b:'5 × 5 Board',
+        lv2n:'Explorer',  lv2w:'Played a few times?<br>Try this!',     lv2b:'7 × 7 Board',
+        lv3n:'Advanced',  lv3w:'Feeling confident?<br>Standard board!',lv3b:'9 × 9 Board',
+        lvBack:'← Back',
+        /* game */
+        spPlayers:'Players', spScore:'Score (Territory)',
+        pYou:'You (Black)', pCpu:'Computer (White)',
+        pYouCap:'Captured:', pCpuCap:'Captured:',
+        spYouLbl:'You', spCpuLbl:'CPU',
+        btnHint:'Show Hint', btnRules:'Quick Rules', btnPass:'Pass Turn', btnBack:'Change Level',
+        turnYou:'Your Turn (Black)', turnCpu:"Computer's Turn (White)", turnThink:'Thinking… (White)',
+        /* rules modal */
+        rmTitle:'📖 Quick Rules', rmSub:'Go in 60 seconds!',
+        rm1t:'Place stones on intersections', rm1d:'Click any dot where lines cross. Stones stay put once placed.',
+        rm2t:'Liberties keep stones alive',   rm2d:'Surround all neighbors of an enemy group to capture it!',
+        rm3t:'No suicide moves',              rm3d:"You can't place a stone with zero liberties unless it captures an enemy group.",
+        rm4t:'Ko rule',                       rm4d:"You can't immediately recapture the stone just taken.",
+        rm5t:'Score = Territory + Captures',  rm5d:'Most points wins! 🏆',
+        rmClose:"Got it! Let's play 🎉",
+        /* result */
+        thPlayer:'Player', thTerr:'Territory', thCap:'Captures', thTotal:'Total',
+        rtYouLbl:'You', rtCpuLbl:'CPU',
+        resReplay:'🔄 Play Again', resLevel:'🎮 Change Level',
+        winTitle:'You Won! 🏆',   winMsg:'Amazing! You beat the computer! Keep it up! 🌟',
+        loseTitle:'Computer Won!',loseMsg:"Don't give up — every game makes you stronger! 💪",
+        tieTitle:"It's a Tie! 🤝",tieMsg:"Incredible — equal skill! Play again? 🎲",
+        /* messages */
+        msgStart:'Click any intersection to place your stone! 😊',
+        msgYourTurn:['Your turn — where will you go? 🤔','Think carefully… 😊','Your move! 💪','You got this! ⭐'],
+        msgGood:    ['Nice move! ✨','Well played! 👍','Great thinking! 🌟','Smart! 🧠'],
+        msgCapture: ['You captured a stone! 🎉','Got one! Amazing! ⚡','Stone captured! 🔥'],
+        msgAiCap:   ['Computer captured one! Fight back! 😤','A stone was captured! Hang in there! 💪'],
+        msgIllegal: ["That spot is not allowed! 😅","Can't go there! 🚫","That move isn't legal! ❌"],
+        msgThink:   ['Computer is thinking… 🤔','Planning my move… ⏳','Hmm… 🧐'],
+        msgPass:    "You passed! Computer's turn…",
+        msgCpuPass: 'Computer passed! Your turn!',
+        msgHint:    '💡 Hint: try {pos} — highlighted in blue!',
+    },
+
+    ko: {
+        langBtn: '🌐 언어',
+        lmTitle: '🌐 언어 선택',
+        badge: '✨ 4,000년 역사의 전략 게임',
+        title: '어린이 바둑 교실 🪨',
+        sub:   '세계인이 즐기는 바둑을 배워봐요!',
+        r1t:'목표',           r1d:'바둑판에 돌을 놓아 상대방보다 더 많은 집을 차지하세요.',
+        r2t:'번갈아 두기',    r2d:'내가 흑이에요! 먼저 두고, 교차점을 클릭해 돌을 놓으세요.',
+        r3t:'돌 따내기',      r3d:'상대방의 돌을 완전히 둘러싸면 따낼 수 있어요!',
+        r4t:'게임 종료',      r4d:'두 사람이 모두 패스하면 집 + 따낸 돌로 점수를 계산해요!',
+        playBtn:'시작하기! 🚀',
+        lvTitle:'🎮 레벨 선택', lvSub:'나에게 맞는 판 크기를 골라보세요!',
+        lv1n:'쉬움',    lv1w:'바둑이 처음이에요<br>작은 판으로 시작!',       lv1b:'5 × 5 판',
+        lv2n:'보통',    lv2w:'조금 알고 있어요<br>더 큰 판에 도전!',         lv2b:'7 × 7 판',
+        lv3n:'어려움',  lv3w:'자신 있어요!<br>표준 9칸 판!',                  lv3b:'9 × 9 판',
+        lvBack:'← 돌아가기',
+        spPlayers:'플레이어', spScore:'점수 (집)',
+        pYou:'나 (흑)', pCpu:'컴퓨터 (백)',
+        pYouCap:'잡은 돌:', pCpuCap:'잡은 돌:',
+        spYouLbl:'나', spCpuLbl:'CPU',
+        btnHint:'힌트 보기', btnRules:'규칙 보기', btnPass:'패스하기', btnBack:'레벨 선택',
+        turnYou:'내 차례 (흑)', turnCpu:'컴퓨터 차례 (백)', turnThink:'생각 중… (백)',
+        rmTitle:'📖 바둑 규칙', rmSub:'60초로 배우는 바둑!',
+        rm1t:'교차점에 돌을 놓아요',    rm1d:'줄이 만나는 점을 클릭해요. 한 번 놓으면 못 움직여요.',
+        rm2t:'활로가 돌을 살려요',      rm2d:'상대 돌의 활로(빈 곳)를 모두 막으면 따낼 수 있어요!',
+        rm3t:'자충수 금지',             rm3d:'활로가 없어지는 곳에는 놓을 수 없어요 (잡는 경우 제외).',
+        rm4t:'패(Ko) 규칙',             rm4d:'방금 상대가 따낸 자리에 바로 놓을 수 없어요.',
+        rm5t:'집 + 따낸 돌 = 점수',     rm5d:'점수가 높은 쪽이 이겨요! 🏆',
+        rmClose:'이해했어요! 시작! 🎉',
+        thPlayer:'플레이어', thTerr:'집', thCap:'잡기', thTotal:'합계',
+        rtYouLbl:'나', rtCpuLbl:'CPU',
+        resReplay:'🔄 다시 하기', resLevel:'🎮 레벨 선택',
+        winTitle:'내가 이겼어요! 🏆', winMsg:'대단해요! 컴퓨터를 이겼어요! 🌟',
+        loseTitle:'컴퓨터가 이겼어요!', loseMsg:'포기하지 마세요! 다음엔 꼭 이길 거예요! 💪',
+        tieTitle:'비겼어요! 🤝', tieMsg:'놀라워요 — 실력이 같아요! 한 번 더? 🎲',
+        msgStart:'돌을 놓아보세요! 😊',
+        msgYourTurn:['어디에 놓을까요? 🤔','신중하게 생각해봐요 😊','내 차례예요! 💪','할 수 있어요! ⭐'],
+        msgGood:    ['잘 뒀어요! ✨','멋진 수예요! 👍','훌륭해요! 🌟','스마트! 🧠'],
+        msgCapture: ['돌을 따냈어요! 🎉','잡았다! 멋져요! ⚡','돌 따내기 성공! 🔥'],
+        msgAiCap:   ['컴퓨터가 돌을 가져갔어요! 반격하세요! 😤','내 돌을 잡혔어요! 힘내요! 💪'],
+        msgIllegal: ['거기엔 놓을 수 없어요! 😅','그곳은 안돼요! 🚫','그 수는 규칙 위반이에요! ❌'],
+        msgThink:   ['컴퓨터가 생각 중이에요… 🤔','다음 수를 계획 중이에요… ⏳','음… 🧐'],
+        msgPass:    '패스했어요! 컴퓨터 차례예요…',
+        msgCpuPass: '컴퓨터가 패스했어요! 내 차례예요!',
+        msgHint:    '💡 힌트: {pos}에 놓아보세요 — 파란색 표시!',
+    },
+
+    zh: {
+        langBtn: '🌐 语言',
+        lmTitle: '🌐 选择语言',
+        badge: '✨ 四千年历史的策略游戏',
+        title: '儿童围棋学堂 🪨',
+        sub:   '学习拥有四千年历史的围棋！',
+        r1t:'游戏目标',   r1d:'在棋盘上落子，占领比对手更多的地盘（空交叉点）。',
+        r2t:'轮流落子',   r2d:'你执黑先行！点击棋盘上的交叉点来落子。',
+        r3t:'吃掉棋子',   r3d:'完全包围对方的棋子或棋组，即可吃掉它们！',
+        r4t:'游戏结束',   r4d:'双方都虚手（Pass）后，计算地盘+吃子数，得分高者获胜！',
+        playBtn:'开始游戏！🚀',
+        lvTitle:'🎮 选择难度', lvSub:'选择适合你的棋盘大小！',
+        lv1n:'入门',    lv1w:'第一次学围棋？<br>从这里开始！',    lv1b:'5 × 5 棋盘',
+        lv2n:'进阶',    lv2w:'有一些基础？<br>来挑战吧！',        lv2b:'7 × 7 棋盘',
+        lv3n:'高手',    lv3w:'充满信心？<br>标准九路棋盘！',      lv3b:'9 × 9 棋盘',
+        lvBack:'← 返回',
+        spPlayers:'玩家', spScore:'得分（地盘）',
+        pYou:'我（黑棋）', pCpu:'电脑（白棋）',
+        pYouCap:'吃子：', pCpuCap:'吃子：',
+        spYouLbl:'我', spCpuLbl:'电脑',
+        btnHint:'显示提示', btnRules:'快速规则', btnPass:'虚手（Pass）', btnBack:'切换难度',
+        turnYou:'你的回合（黑棋）', turnCpu:'电脑回合（白棋）', turnThink:'思考中…（白棋）',
+        rmTitle:'📖 围棋规则', rmSub:'60秒学会围棋！',
+        rm1t:'在交叉点落子',    rm1d:'点击棋盘上线条交叉的点，棋子落下后不能移动。',
+        rm2t:'气使棋子存活',    rm2d:'棋子周围的空格叫"气"。若对方棋组的气被全部占满，即被吃掉！',
+        rm3t:'禁止自杀',        rm3d:'不能在落子后自己没有气的位置落子（吃掉对方棋子除外）。',
+        rm4t:'打劫（Ko）规则',  rm4d:'不能立即重新占回刚被吃掉的那个位置。',
+        rm5t:'得分 = 地盘 + 吃子', rm5d:'得分最高者获胜！🏆',
+        rmClose:'明白了！开始游戏 🎉',
+        thPlayer:'玩家', thTerr:'地盘', thCap:'吃子', thTotal:'合计',
+        rtYouLbl:'我', rtCpuLbl:'电脑',
+        resReplay:'🔄 再来一局', resLevel:'🎮 切换难度',
+        winTitle:'你赢了！🏆', winMsg:'太棒了！你打败了电脑！继续加油！🌟',
+        loseTitle:'电脑赢了！', loseMsg:'不要放弃，每次对局都让你变得更强！💪',
+        tieTitle:'平局！🤝', tieMsg:'太厉害了——势均力敌！再来一局？🎲',
+        msgStart:'点击交叉点落子吧！😊',
+        msgYourTurn:['轮到你了，往哪里下？🤔','认真思考… 😊','你的回合！💪','加油！⭐'],
+        msgGood:    ['好棋！✨','下得不错！👍','真厉害！🌟','聪明！🧠'],
+        msgCapture: ['你吃掉了一颗棋子！🎉','抓住了！厉害！⚡','成功吃子！🔥'],
+        msgAiCap:   ['电脑吃掉你的棋子了！反击！😤','棋子被吃了！坚持住！💪'],
+        msgIllegal: ['那里不能落子！😅','这个位置不行！🚫','这步棋违规！❌'],
+        msgThink:   ['电脑在思考中…🤔','正在计划下一步…⏳','嗯…🧐'],
+        msgPass:    '你虚手了！轮到电脑…',
+        msgCpuPass: '电脑虚手了！轮到你了！',
+        msgHint:    '💡 提示：试试 {pos}——蓝色标记处！',
+    },
+
+    ja: {
+        langBtn: '🌐 言語',
+        lmTitle: '🌐 言語を選ぶ',
+        badge: '✨ 4000年の歴史を持つ戦略ゲーム',
+        title: 'こども囲碁教室 🪨',
+        sub:   '4000年の歴史を持つ囲碁を楽しく学ぼう！',
+        r1t:'目的',         r1d:'碁盤に石を置いて、相手より多くの陣地（空き点）を確保しよう！',
+        r2t:'交互に置く',   r2d:'あなたは黒番で最初に打ちます！碁盤の交点をクリックして石を置こう。',
+        r3t:'石を取る',     r3d:'相手の石やグループを完全に囲むと取ることができます！',
+        r4t:'ゲーム終了',   r4d:'両者がパスすると終局。陣地＋取った石で得点を数えます！',
+        playBtn:'はじめる！🚀',
+        lvTitle:'🎮 レベルを選ぼう', lvSub:'自分のレベルに合った盤を選んでね！',
+        lv1n:'かんたん',  lv1w:'囲碁はじめて？<br>小さな盤でスタート！',   lv1b:'5 × 5 盤',
+        lv2n:'ふつう',    lv2w:'少し知っている？<br>もう少し大きな盤！',   lv2b:'7 × 7 盤',
+        lv3n:'むずかしい',lv3w:'自信がある？<br>標準サイズの盤！',         lv3b:'9 × 9 盤',
+        lvBack:'← 戻る',
+        spPlayers:'プレイヤー', spScore:'得点（陣地）',
+        pYou:'あなた（黒）', pCpu:'コンピュータ（白）',
+        pYouCap:'取った石：', pCpuCap:'取った石：',
+        spYouLbl:'あなた', spCpuLbl:'CPU',
+        btnHint:'ヒントを見る', btnRules:'ルール確認', btnPass:'パスする', btnBack:'レベル変更',
+        turnYou:'あなたの番（黒）', turnCpu:'コンピュータの番（白）', turnThink:'考え中…（白）',
+        rmTitle:'📖 囲碁ルール', rmSub:'60秒で囲碁を学ぼう！',
+        rm1t:'交点に石を置く',      rm1d:'線が交わる点をクリック。一度置いた石は動かせません。',
+        rm2t:'「呼吸点（ダメ）」が石を守る', rm2d:'石の周りの空き点が「呼吸点」。全て塞がれると取られます！',
+        rm3t:'自殺手は禁止',        rm3d:'自分の呼吸点がなくなる場所には置けません（相手を取る場合を除く）。',
+        rm4t:'コウのルール',        rm4d:'直前に取られた場所にすぐ打ち返すことはできません。',
+        rm5t:'得点 ＝ 陣地 ＋ 取った石', rm5d:'得点が高い方が勝ちです！🏆',
+        rmClose:'わかった！遊ぼう 🎉',
+        thPlayer:'プレイヤー', thTerr:'陣地', thCap:'取り', thTotal:'合計',
+        rtYouLbl:'あなた', rtCpuLbl:'CPU',
+        resReplay:'🔄 もう一度', resLevel:'🎮 レベル変更',
+        winTitle:'あなたの勝ち！🏆', winMsg:'すごい！コンピュータに勝ちました！🌟',
+        loseTitle:'コンピュータの勝ち！', loseMsg:'あきらめないで！次は勝てます！💪',
+        tieTitle:'引き分け！🤝', tieMsg:'すごい、互角でした！もう一回？🎲',
+        msgStart:'交点をクリックして石を置いてね！😊',
+        msgYourTurn:['どこに置く？🤔','よく考えて… 😊','あなたの番！💪','がんばって！⭐'],
+        msgGood:    ['いい手！✨','うまい！👍','素晴らしい！🌟','賢い！🧠'],
+        msgCapture: ['石を取りました！🎉','取った！すごい！⚡','取り成功！🔥'],
+        msgAiCap:   ['コンピュータに取られました！頑張れ！😤','石が取られた！負けるな！💪'],
+        msgIllegal: ['そこには置けません！😅','その場所はダメ！🚫','その手は反則！❌'],
+        msgThink:   ['コンピュータが考え中…🤔','次の手を計画中…⏳','うーん…🧐'],
+        msgPass:    'パスしました！コンピュータの番…',
+        msgCpuPass: 'コンピュータがパス！あなたの番！',
+        msgHint:    '💡 ヒント：{pos} に置いてみよう（青マーク）！',
+    },
+
+    es: {
+        langBtn: '🌐 Idioma',
+        lmTitle: '🌐 Elegir Idioma',
+        badge: '✨ Juego de Estrategia de 4,000 Años',
+        title: 'Go para Niños 🪨',
+        sub:   '¡Aprende el juego de Go de 4,000 años — fácil de aprender, difícil de dominar!',
+        r1t:'El Objetivo',    r1d:'Reclama más territorio que tu oponente colocando piedras en el tablero.',
+        r2t:'Por Turnos',     r2d:'¡Juegas con las Negras y vas primero! Haz clic en cualquier intersección.',
+        r3t:'Capturar',       r3d:'¡Rodea completamente la piedra o grupo del oponente para capturarlo!',
+        r4t:'Fin del Juego',  r4d:'Cuando ambos pasan, se cuenta el territorio + capturas. ¡Más puntos gana!',
+        playBtn:'¡Jugar! 🚀',
+        lvTitle:'🎮 Elige tu Nivel', lvSub:'¡Elige el tablero que se adapte a tu habilidad!',
+        lv1n:'Principiante', lv1w:'¿Nuevo en Go?<br>¡Empieza aquí!',      lv1b:'Tablero 5 × 5',
+        lv2n:'Explorador',   lv2w:'¿Ya jugaste antes?<br>¡Prueba esto!',  lv2b:'Tablero 7 × 7',
+        lv3n:'Avanzado',     lv3w:'¿Te sientes confiado?<br>¡Tablero estándar!', lv3b:'Tablero 9 × 9',
+        lvBack:'← Volver',
+        spPlayers:'Jugadores', spScore:'Puntuación (Territorio)',
+        pYou:'Tú (Negras)', pCpu:'Computadora (Blancas)',
+        pYouCap:'Capturadas:', pCpuCap:'Capturadas:',
+        spYouLbl:'Tú', spCpuLbl:'CPU',
+        btnHint:'Mostrar Pista', btnRules:'Reglas Rápidas', btnPass:'Pasar Turno', btnBack:'Cambiar Nivel',
+        turnYou:'Tu Turno (Negras)', turnCpu:'Turno de CPU (Blancas)', turnThink:'Pensando… (Blancas)',
+        rmTitle:'📖 Reglas Rápidas', rmSub:'¡Go en 60 segundos!',
+        rm1t:'Coloca piedras en intersecciones', rm1d:'Haz clic donde se cruzan las líneas. Las piedras no se mueven.',
+        rm2t:'Las libertades mantienen las piedras', rm2d:'¡Rodea todos los espacios libres de un grupo enemigo para capturarlo!',
+        rm3t:'No al suicidio',       rm3d:'No puedes colocar una piedra sin libertades, a menos que capture un grupo.',
+        rm4t:'Regla Ko',             rm4d:'No puedes volver a capturar inmediatamente la piedra recién tomada.',
+        rm5t:'Puntos = Territorio + Capturas', rm5d:'¡Más puntos gana! 🏆',
+        rmClose:'¡Entendido! ¡A jugar! 🎉',
+        thPlayer:'Jugador', thTerr:'Territorio', thCap:'Capturas', thTotal:'Total',
+        rtYouLbl:'Tú', rtCpuLbl:'CPU',
+        resReplay:'🔄 Jugar de Nuevo', resLevel:'🎮 Cambiar Nivel',
+        winTitle:'¡Ganaste! 🏆',   winMsg:'¡Increíble! ¡Venciste a la computadora! 🌟',
+        loseTitle:'¡Ganó la Computadora!', loseMsg:'¡No te rindas — cada partida te hace más fuerte! 💪',
+        tieTitle:'¡Empate! 🤝',    tieMsg:'¡Increíble — habilidades iguales! ¿Jugamos otra vez? 🎲',
+        msgStart:'¡Haz clic en una intersección para colocar tu piedra! 😊',
+        msgYourTurn:['Tu turno — ¿adónde vas? 🤔','Piensa con cuidado… 😊','¡Tu movimiento! 💪','¡Tú puedes! ⭐'],
+        msgGood:    ['¡Buen movimiento! ✨','¡Bien jugado! 👍','¡Excelente! 🌟','¡Inteligente! 🧠'],
+        msgCapture: ['¡Capturaste una piedra! 🎉','¡Capturada! ¡Genial! ⚡','¡Captura exitosa! 🔥'],
+        msgAiCap:   ['¡La computadora capturó una piedra! ¡Contraataca! 😤','¡Perdiste una piedra! ¡Ánimo! 💪'],
+        msgIllegal: ['¡Ahí no se puede! 😅','¡Ese lugar no está permitido! 🚫','¡Movimiento ilegal! ❌'],
+        msgThink:   ['La computadora está pensando… 🤔','Planeando el próximo movimiento… ⏳','Hmm… 🧐'],
+        msgPass:    '¡Pasaste! Turno de la computadora…',
+        msgCpuPass: '¡La computadora pasó! ¡Tu turno!',
+        msgHint:    '💡 Pista: prueba en {pos} — ¡marcado en azul!',
+    },
+};
+
+/* ─────────────────────────────────
+   Language helpers
+───────────────────────────────── */
+let lang = 'en';
+
+function tx(key) { return (T[lang] || T.en)[key] || (T.en[key] || ''); }
+function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function applyLang() {
+  try {
+    const L = T[lang];
+    document.documentElement.lang = lang;
+    document.getElementById('lang-btn').textContent = L.langBtn;
+
+    // intro
+    document.getElementById('i-badge').textContent = L.badge;
+    document.getElementById('i-title').textContent = L.title;
+    document.getElementById('i-sub').textContent   = L.sub;
+    document.getElementById('r1-t').textContent    = L.r1t; document.getElementById('r1-d').textContent = L.r1d;
+    document.getElementById('r2-t').textContent    = L.r2t; document.getElementById('r2-d').textContent = L.r2d;
+    document.getElementById('r3-t').textContent    = L.r3t; document.getElementById('r3-d').textContent = L.r3d;
+    document.getElementById('r4-t').textContent    = L.r4t; document.getElementById('r4-d').textContent = L.r4d;
+    document.getElementById('i-btn').textContent   = L.playBtn;
+
+    // level
+    document.getElementById('lv-title').textContent   = L.lvTitle;
+    document.getElementById('lv-sub').textContent     = L.lvSub;
+    document.getElementById('lv1-name').textContent   = L.lv1n;
+    document.getElementById('lv1-who').innerHTML      = L.lv1w;
+    document.getElementById('lv1-badge').textContent  = L.lv1b;
+    document.getElementById('lv2-name').textContent   = L.lv2n;
+    document.getElementById('lv2-who').innerHTML      = L.lv2w;
+    document.getElementById('lv2-badge').textContent  = L.lv2b;
+    document.getElementById('lv3-name').textContent   = L.lv3n;
+    document.getElementById('lv3-who').innerHTML      = L.lv3w;
+    document.getElementById('lv3-badge').textContent  = L.lv3b;
+    document.getElementById('lv-back').textContent    = L.lvBack;
+
+    // game panel
+    document.getElementById('sp-players').textContent = L.spPlayers;
+    document.getElementById('sp-score').textContent   = L.spScore;
+    document.getElementById('p-you').textContent      = L.pYou;
+    document.getElementById('p-cpu').textContent      = L.pCpu;
+    document.getElementById('sp-you-lbl').textContent = L.spYouLbl;
+    document.getElementById('sp-cpu-lbl').textContent = L.spCpuLbl;
+    document.getElementById('btn-hint-lbl').textContent  = L.btnHint;
+    document.getElementById('btn-rules-lbl').textContent = L.btnRules;
+    document.getElementById('btn-pass-lbl').textContent  = L.btnPass;
+    document.getElementById('btn-back-lbl').textContent  = L.btnBack;
+    updateCaptureLabels();
+
+    // rules modal
+    document.getElementById('rm-title').textContent = L.rmTitle;
+    document.getElementById('rm-sub').textContent   = L.rmSub;
+    document.getElementById('rm1-t').textContent = L.rm1t; document.getElementById('rm1-d').textContent = L.rm1d;
+    document.getElementById('rm2-t').textContent = L.rm2t; document.getElementById('rm2-d').textContent = L.rm2d;
+    document.getElementById('rm3-t').textContent = L.rm3t; document.getElementById('rm3-d').textContent = L.rm3d;
+    document.getElementById('rm4-t').textContent = L.rm4t; document.getElementById('rm4-d').textContent = L.rm4d;
+    document.getElementById('rm5-t').textContent = L.rm5t; document.getElementById('rm5-d').textContent = L.rm5d;
+    document.getElementById('rm-close').textContent  = L.rmClose;
+
+    // result modal labels
+    document.getElementById('th-player').textContent  = L.thPlayer;
+    document.getElementById('th-terr').textContent    = L.thTerr;
+    document.getElementById('th-cap').textContent     = L.thCap;
+    document.getElementById('th-total').textContent   = L.thTotal;
+    document.getElementById('rt-you-lbl').textContent = L.rtYouLbl;
+    document.getElementById('rt-cpu-lbl').textContent = L.rtCpuLbl;
+    document.getElementById('res-replay').textContent = L.resReplay;
+    document.getElementById('res-level').textContent  = L.resLevel;
+
+    // lang modal title
+    document.getElementById('lm-title').textContent = L.lmTitle;
+
+    // Highlight selected lang option
+    ['en','ko','zh','ja','es'].forEach(c => {
+        const el = document.getElementById('lo-'+c);
+        if (el) el.classList.toggle('selected', c === lang);
+    });
+  } catch(e) { console.warn('applyLang error:', e); }
+}
+
+function updateCaptureLabels() {
+    const L = T[lang];
+    document.getElementById('p-you-cap').innerHTML  = L.pYouCap + ' <span id="cap-black">'  + (captures ? captures.black : 0) + '</span>';
+    document.getElementById('p-cpu-cap').innerHTML  = L.pCpuCap + ' <span id="cap-white">'  + (captures ? captures.white : 0) + '</span>';
+}
+
+function setLang(l) {
+    lang = l;
+    applyLang();
+    document.getElementById('lang-modal').classList.remove('show');
+    // Move from lang screen → intro
+    if (document.getElementById('lang-screen').classList.contains('active')) {
+        showIntroScreen();
+    }
+    document.getElementById('lang-btn').style.display  = 'block';
+    document.getElementById('vol-ctrl').style.display  = 'flex';
+    syncVolUI();
+}
+
+function openLangModal() { document.getElementById('lang-modal').classList.add('show'); }
+
+// Close lang modal on overlay click
+document.getElementById('lang-modal').addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('show');
+});
+
+/* ─────────────────────────────────
+   Screen Navigation
+───────────────────────────────── */
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+function showIntroScreen()  { showScreen('intro-screen'); }
+function showLevelScreen()  { showScreen('level-screen'); }
+function goToLevelScreen()  { showScreen('level-screen'); }
+function fromResultToLevel(){ closeResult(); showScreen('level-screen'); }
+
+/* ─────────────────────────────────
+   Audio Engine
+───────────────────────────────── */
+let audioCtx    = null;
+let masterVolume = 0.7;   // 0.0 ~ 1.0
+let isMuted      = false;
+let prevVolume   = 0.7;
+
+function getAC() {
+    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    // Resume if suspended (autoplay policy)
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+
+/* Effective gain (0 when muted) */
+function vol(scale=1) { return isMuted ? 0 : masterVolume * scale; }
+
+/* ── Simple tone helper (used for jingles) ── */
+function tone(f, d, type='sine', scale=1) {
+    const v = vol(scale);
+    if (v <= 0) return;
+    try {
+        const ac=getAC(), o=ac.createOscillator(), g=ac.createGain();
+        o.connect(g); g.connect(ac.destination);
+        o.type=type; o.frequency.value=f;
+        g.gain.setValueAtTime(v, ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+d);
+        o.start(); o.stop(ac.currentTime+d);
+    } catch(e){}
+}
+
+/* ── Realistic stone clack (noise + pitch-drop thud) ── */
+function playStoneClack(scale=1) {
+    const v = vol(scale);
+    if (v <= 0) return;
+    try {
+        const ac  = getAC();
+        const now = ac.currentTime;
+
+        /* 1) Noise burst → BPF → quick fade  (the "click") */
+        const SR     = ac.sampleRate;
+        const bufLen = Math.floor(SR * 0.06);          // 60 ms noise
+        const nBuf   = ac.createBuffer(1, bufLen, SR);
+        const data   = nBuf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) {
+            // Decaying white noise
+            data[i] = (Math.random()*2-1) * Math.exp(-i / (bufLen * 0.12));
+        }
+        const nSrc = ac.createBufferSource();
+        nSrc.buffer = nBuf;
+
+        const bpf = ac.createBiquadFilter();
+        bpf.type            = 'bandpass';
+        bpf.frequency.value = 1800;   // bright "clack" character
+        bpf.Q.value         = 0.8;
+
+        const nGain = ac.createGain();
+        nGain.gain.setValueAtTime(v * 1.4, now);
+        nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+
+        nSrc.connect(bpf);
+        bpf.connect(nGain);
+        nGain.connect(ac.destination);
+        nSrc.start(now);
+
+        /* 2) Pitch-drop oscillator  (the "thud" / wood resonance) */
+        const osc = ac.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.14);
+
+        const oGain = ac.createGain();
+        oGain.gain.setValueAtTime(v * 0.55, now);
+        oGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+        osc.connect(oGain);
+        oGain.connect(ac.destination);
+        osc.start(now);
+        osc.stop(now + 0.18);
+    } catch(e){}
+}
+
+/* ── Capture sound: two lower clacks ── */
+function playCaptureSound() {
+    const v = vol();
+    if (v <= 0) return;
+    try {
+        const ac=getAC(), now=ac.currentTime;
+        [0, 0.10].forEach(offset => {
+            const o=ac.createOscillator(), g=ac.createGain();
+            o.type='triangle';
+            o.frequency.setValueAtTime(180, now+offset);
+            o.frequency.exponentialRampToValueAtTime(60, now+offset+0.12);
+            g.gain.setValueAtTime(v*0.55, now+offset);
+            g.gain.exponentialRampToValueAtTime(0.001, now+offset+0.15);
+            o.connect(g); g.connect(ac.destination);
+            o.start(now+offset); o.stop(now+offset+0.18);
+        });
+    } catch(e){}
+}
+
+const sfx = {
+    place:   () => playStoneClack(),
+    capture: () => playCaptureSound(),
+    bad:     () => tone(200, 0.1, 'sawtooth', 0.7),
+    win:     () => [523,659,784,1047].forEach((f,i) => setTimeout(()=>tone(f,0.25,'sine',1.0), i*110)),
+    lose:    () => [440,370,330,262].forEach((f,i) => setTimeout(()=>tone(f,0.22,'sine',0.8), i*120)),
+};
+
+/* ─────────────────────────────────
+   Volume UI
+───────────────────────────────── */
+function toggleVolPanel() {
+    const panel = document.getElementById('vol-panel');
+    panel.classList.toggle('show');
+}
+
+/* Close panel when clicking outside */
+document.addEventListener('click', (e) => {
+    const ctrl = document.getElementById('vol-ctrl');
+    if (ctrl && !ctrl.contains(e.target)) {
+        document.getElementById('vol-panel').classList.remove('show');
+    }
+});
+
+function onSliderInput(val) {
+    isMuted     = false;
+    masterVolume = val / 100;
+    prevVolume   = masterVolume;
+    syncVolUI();
+}
+
+function toggleMute() {
+    if (isMuted) {
+        isMuted      = false;
+        masterVolume = prevVolume > 0 ? prevVolume : 0.5;
+        document.getElementById('vol-slider').value = Math.round(masterVolume * 100);
+    } else {
+        prevVolume  = masterVolume;
+        isMuted     = true;
+        masterVolume = 0;
+    }
+    syncVolUI();
+}
+
+function syncVolUI() {
+    const pct  = Math.round(masterVolume * 100);
+    const icon = isMuted || pct === 0 ? '🔇' : pct < 35 ? '🔈' : pct < 70 ? '🔉' : '🔊';
+
+    document.getElementById('vol-icon-btn').textContent  = icon;
+    document.getElementById('vol-pct-btn').textContent   = pct + '%';
+    document.getElementById('mute-btn').textContent      = icon;
+    document.getElementById('vol-pct-disp').textContent  = pct + '%';
+    document.getElementById('vol-slider').value          = pct;
+
+    // Update slider gradient fill
+    const slider = document.getElementById('vol-slider');
+    slider.style.background =
+        `linear-gradient(to right, var(--gold) 0%, var(--gold) ${pct}%, rgba(255,255,255,0.2) ${pct}%)`;
+
+    const muteBtn = document.getElementById('mute-btn');
+    muteBtn.classList.toggle('muted', isMuted || pct === 0);
+}
+
+/* ─────────────────────────────────
+   Particles
+───────────────────────────────── */
+const pcvs = document.getElementById('pcvs');
+const pctx = pcvs.getContext('2d');
+let ptls = [];
+
+function resizePcvs(){ pcvs.width=innerWidth; pcvs.height=innerHeight; }
+window.addEventListener('resize', resizePcvs); resizePcvs();
+
+function launchConfetti(){
+    ptls = [];
+    const colors = ['#f9a825','#4caf50','#2196f3','#e91e63','#9c27b0','#ff5722','#00bcd4'];
+    for(let i=0;i<130;i++) ptls.push({
+        x:Math.random()*pcvs.width, y:-20,
+        vx:(Math.random()-0.5)*6, vy:2+Math.random()*5,
+        sz:6+Math.random()*8, color:colors[Math.floor(Math.random()*colors.length)],
+        rot:Math.random()*360, drot:(Math.random()-0.5)*9, alpha:1
+    });
+    animPtls();
+}
+function animPtls(){
+    pctx.clearRect(0,0,pcvs.width,pcvs.height);
+    ptls = ptls.filter(p=>p.alpha>0.05&&p.y<pcvs.height+40);
+    ptls.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy; p.vy+=0.13; p.rot+=p.drot;
+        if(p.y>pcvs.height*0.6) p.alpha-=0.018;
+        pctx.save(); pctx.globalAlpha=p.alpha;
+        pctx.translate(p.x,p.y); pctx.rotate(p.rot*Math.PI/180);
+        pctx.fillStyle=p.color; pctx.fillRect(-p.sz/2,-p.sz/4,p.sz,p.sz/2);
+        pctx.restore();
+    });
+    if(ptls.length) requestAnimationFrame(animPtls);
+    else pctx.clearRect(0,0,pcvs.width,pcvs.height);
+}
+
+/* ─────────────────────────────────
+   Constants
+───────────────────────────────── */
+const EMPTY=0, BLACK=1, WHITE=2;
+
+/* ─────────────────────────────────
+   Game State
+───────────────────────────────── */
+let bs, cs;
+let board, captures, koPoint, passCnt, level, over, aiThinking;
+let lastMove=null, hintCell=null;
+let canvas, ctx;
+
+/* ─────────────────────────────────
+   Start / Replay
+───────────────────────────────── */
+function startGame(lv) {
+    level=lv;
+    bs = lv===1?5:lv===2?7:9;
+    cs = lv===1?68:lv===2?58:50;
+
+    board      = Array.from({length:bs},()=>new Array(bs).fill(EMPTY));
+    captures   = {black:0, white:0};
+    koPoint    = null;
+    passCnt    = 0;
+    over       = false;
+    aiThinking = false;
+    lastMove   = null;
+    hintCell   = null;
+
+    showScreen('game-screen');
+
+    canvas = document.getElementById('board-canvas');
+    const size = cs*(bs+1);
+    canvas.width = size; canvas.height = size;
+    ctx = canvas.getContext('2d');
+    canvas.onclick = onCanvasClick;
+
+    document.getElementById('btn-hint').style.display = lv===1 ? 'flex' : 'none';
+    updateCaptureLabels();
+    updateScoreStrip();
+    render();
+    setMsg(tx('msgStart'));
+    updateTurnUI(BLACK);
+}
+
+function replayGame()  { closeResult(); startGame(level); }
+function openRules()   { document.getElementById('rules-modal').classList.add('show'); }
+function closeRules()  { document.getElementById('rules-modal').classList.remove('show'); }
+function closeResult() { document.getElementById('result-modal').classList.remove('show'); }
+
+/* ─────────────────────────────────
+   Rendering
+───────────────────────────────── */
+function M() { return cs; }
+
+function render(){
+    const m=M();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const bg=ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+    bg.addColorStop(0,'#e8aa3a'); bg.addColorStop(.5,'#d49820'); bg.addColorStop(1,'#c08010');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    if(hintCell){
+        ctx.save(); ctx.shadowColor='#2196f3'; ctx.shadowBlur=22;
+        ctx.fillStyle='rgba(33,150,243,0.35)';
+        ctx.beginPath(); ctx.arc(m+hintCell.x*cs,m+hintCell.y*cs,cs*0.46,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+    if(lastMove){
+        ctx.fillStyle='rgba(255,120,50,0.18)';
+        ctx.beginPath(); ctx.arc(m+lastMove.x*cs,m+lastMove.y*cs,cs*0.46,0,Math.PI*2); ctx.fill();
+    }
+
+    ctx.strokeStyle='#8a5e0e'; ctx.lineWidth=1.2;
+    for(let i=0;i<bs;i++){
+        ctx.beginPath(); ctx.moveTo(m+i*cs,m); ctx.lineTo(m+i*cs,m+(bs-1)*cs); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(m,m+i*cs); ctx.lineTo(m+(bs-1)*cs,m+i*cs); ctx.stroke();
+    }
+    for(const [sx,sy] of stars()){
+        ctx.fillStyle='#7a5a0a'; ctx.beginPath(); ctx.arc(m+sx*cs,m+sy*cs,4,0,Math.PI*2); ctx.fill();
+    }
+
+    ctx.fillStyle='rgba(90,55,5,0.75)';
+    ctx.font=`bold ${cs*0.26}px Segoe UI,Arial`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    const COLS='ABCDEFGHIJ';
+    for(let i=0;i<bs;i++){
+        ctx.fillText(COLS[i], m+i*cs, m*0.44);
+        ctx.fillText(String(bs-i), m*0.44, m+i*cs);
+    }
+
+    for(let y=0;y<bs;y++)
+        for(let x=0;x<bs;x++)
+            if(board[y][x]!==EMPTY)
+                drawStone(x,y,board[y][x], lastMove&&lastMove.x===x&&lastMove.y===y);
+}
+
+function stars(){
+    if(bs===9) return [[2,2],[6,2],[4,4],[2,6],[6,6]];
+    if(bs===7) return [[2,2],[4,2],[2,4],[4,4]];
+    return [];
+}
+
+function drawStone(x,y,color,isLast){
+    const m=M(),cx=m+x*cs,cy=m+y*cs,r=cs*0.43;
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=9; ctx.shadowOffsetX=2; ctx.shadowOffsetY=3;
+    const g=ctx.createRadialGradient(cx-r*.3,cy-r*.3,r*.07,cx,cy,r);
+    if(color===BLACK){g.addColorStop(0,'#999');g.addColorStop(1,'#0a0a0a');}
+    else             {g.addColorStop(0,'#fff');g.addColorStop(1,'#bbb');}
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    if(isLast){
+        ctx.strokeStyle=color===BLACK?'rgba(255,255,255,0.55)':'rgba(0,0,0,0.45)';
+        ctx.lineWidth=1.8; ctx.beginPath(); ctx.arc(cx,cy,r*0.34,0,Math.PI*2); ctx.stroke();
+    }
+}
+
+/* ─────────────────────────────────
+   Go Logic
+───────────────────────────────── */
+function nbrs(x,y){
+    const n=[];
+    if(x>0)    n.push([x-1,y]); if(x<bs-1) n.push([x+1,y]);
+    if(y>0)    n.push([x,y-1]); if(y<bs-1) n.push([x,y+1]);
+    return n;
+}
+
+function findGroup(sx,sy){
+    const color=board[sy][sx];
+    if(color===EMPTY) return {stones:[],liberties:new Set()};
+    const stones=[],liberties=new Set(),visited=new Set(),queue=[{x:sx,y:sy}];
+    while(queue.length){
+        const {x,y}=queue.shift(); const k=x+','+y;
+        if(visited.has(k)) continue;
+        visited.add(k); stones.push({x,y});
+        for(const [nx,ny] of nbrs(x,y)){
+            const nk=nx+','+ny;
+            if(board[ny][nx]===EMPTY)  liberties.add(nk);
+            else if(board[ny][nx]===color&&!visited.has(nk)) queue.push({x:nx,y:ny});
+        }
+    }
+    return {stones,liberties};
+}
+
+function isLegal(x,y,color){
+    if(board[y][x]!==EMPTY) return false;
+    if(koPoint&&koPoint.x===x&&koPoint.y===y) return false;
+    const opp=3-color;
+    board[y][x]=color;
+    let anyCapture=false;
+    for(const [nx,ny] of nbrs(x,y))
+        if(board[ny][nx]===opp&&findGroup(nx,ny).liberties.size===0){anyCapture=true;break;}
+    const ok=anyCapture||findGroup(x,y).liberties.size>0;
+    board[y][x]=EMPTY;
+    return ok;
+}
+
+function placeStone(x,y,color){
+    if(!isLegal(x,y,color)) return {ok:false,captured:0};
+    const opp=3-color;
+    board[y][x]=color;
+    const cm=new Map();
+    for(const [nx,ny] of nbrs(x,y))
+        if(board[ny][nx]===opp){
+            const g=findGroup(nx,ny);
+            if(g.liberties.size===0) g.stones.forEach(s=>cm.set(s.x+','+s.y,s));
+        }
+    const cap=[...cm.values()];
+    cap.forEach(s=>{board[s.y][s.x]=EMPTY;});
+    koPoint=null;
+    if(cap.length===1){
+        const own=findGroup(x,y);
+        if(own.stones.length===1&&own.liberties.size===1){
+            const [kx,ky]=[...own.liberties][0].split(',').map(Number);
+            koPoint={x:kx,y:ky};
+        }
+    }
+    if(color===BLACK) captures.black+=cap.length;
+    else              captures.white+=cap.length;
+    lastMove={x,y};
+    return {ok:true,captured:cap.length};
+}
+
+/* ─────────────────────────────────
+   AI
+───────────────────────────────── */
+function scoreMove(x,y,color){
+    if(!isLegal(x,y,color)) return -Infinity;
+    const opp=3-color; let score=0;
+    board[y][x]=color;
+    const cm=new Map();
+    for(const [nx,ny] of nbrs(x,y)){
+        if(board[ny][nx]===opp){
+            const g=findGroup(nx,ny);
+            if(g.liberties.size===0) g.stones.forEach(s=>cm.set(s.x+','+s.y,s));
+            else if(g.liberties.size===1) score+=g.stones.length*6;
+        }
+    }
+    score+=cm.size*20;
+    if(level>=2)
+        for(const [nx,ny] of nbrs(x,y))
+            if(board[ny][nx]===color){
+                const g=findGroup(nx,ny);
+                if(cm.size===0&&g.liberties.size>=2) score+=8;
+            }
+    if(level>=3){
+        board[y][x]=EMPTY;
+        for(let gy=0;gy<bs;gy++) for(let gx=0;gx<bs;gx++)
+            if(board[gy][gx]===color){
+                const g=findGroup(gx,gy);
+                if(g.liberties.size===1){
+                    const [lx,ly]=[...g.liberties][0].split(',').map(Number);
+                    if(lx===x&&ly===y) score+=18;
+                }
+            }
+        board[y][x]=color;
+    }
+    board[y][x]=EMPTY;
+    const c=(bs-1)/2, d=Math.abs(x-c)+Math.abs(y-c);
+    score+=(bs*2-d)*(level>=2?3:1);
+    if(level>=2){
+        const e=x===0||x===bs-1||y===0||y===bs-1;
+        const cor=(x===0||x===bs-1)&&(y===0||y===bs-1);
+        if(cor) score-=12; else if(e) score-=5;
+    }
+    score+=Math.random()*(level===1?30:level===2?12:4);
+    return score;
+}
+
+function pickAI(){
+    let best=-Infinity,mv=null;
+    for(let y=0;y<bs;y++) for(let x=0;x<bs;x++){
+        if(board[y][x]!==EMPTY) continue;
+        const s=scoreMove(x,y,WHITE);
+        if(s>best){best=s;mv={x,y};}
+    }
+    return mv;
+}
+
+function runAI(){
+    if(over) return;
+    aiThinking=true;
+    document.getElementById('msg-box').innerHTML=rnd(tx('msgThink'))+'&nbsp;<span class="spinner"></span>';
+    updateTurnUI(WHITE);
+    const delay=level===1?420:level===2?650:950;
+    setTimeout(()=>{
+        const mv=pickAI();
+        if(mv){
+            const res=placeStone(mv.x,mv.y,WHITE);
+            if(res.ok){
+                passCnt=0; sfx.place();
+                if(res.captured>0) sfx.capture();
+                render(); updateScoreStrip();
+                setMsg(res.captured>0 ? rnd(tx('msgAiCap')) : rnd(tx('msgYourTurn')));
+            }
+        } else {
+            passCnt++;
+            setMsg(tx('msgCpuPass'));
+            if(passCnt>=2){aiThinking=false;endGame();return;}
+        }
+        aiThinking=false;
+        updateTurnUI(BLACK);
+    },delay);
+}
+
+/* ─────────────────────────────────
+   Player Actions
+───────────────────────────────── */
+function onCanvasClick(e){
+    if(over||aiThinking) return;
+    hintCell=null;
+    const rect=canvas.getBoundingClientRect();
+    const m=M();
+    const sx=canvas.width/rect.width, sy=canvas.height/rect.height;
+    const mx=(e.clientX-rect.left)*sx, my=(e.clientY-rect.top)*sy;
+    const x=Math.round((mx-m)/cs), y=Math.round((my-m)/cs);
+    if(x<0||x>=bs||y<0||y>=bs) return;
+
+    const res=placeStone(x,y,BLACK);
+    if(!res.ok){ sfx.bad(); setMsg(rnd(tx('msgIllegal'))); return; }
+    passCnt=0; sfx.place();
+    if(res.captured>0){ sfx.capture(); setMsg(rnd(tx('msgCapture'))); }
+    else setMsg(rnd(tx('msgGood')));
+    render(); updateScoreStrip(); updateTurnUI(WHITE);
+    runAI();
+}
+
+function playerPass(){
+    if(over||aiThinking) return;
+    hintCell=null; passCnt++; koPoint=null;
+    if(passCnt>=2){endGame();return;}
+    setMsg(tx('msgPass'));
+    updateTurnUI(WHITE); runAI();
+}
+
+function showHint(){
+    if(over||aiThinking) return;
+    let best=-Infinity,mv=null;
+    for(let y=0;y<bs;y++) for(let x=0;x<bs;x++){
+        if(!isLegal(x,y,BLACK)) continue;
+        const s=scoreMove(x,y,BLACK);
+        if(s>best){best=s;mv={x,y};}
+    }
+    if(mv){
+        hintCell=mv; render();
+        const pos=String.fromCharCode(65+mv.x)+(bs-mv.y);
+        setMsg(tx('msgHint').replace('{pos}',pos));
+    }
+}
+
+/* ─────────────────────────────────
+   Territory & End
+───────────────────────────────── */
+function calcTerritory(){
+    const visited=new Set(); let bt=0,wt=0;
+    for(let sy=0;sy<bs;sy++) for(let sx=0;sx<bs;sx++){
+        if(board[sy][sx]!==EMPTY||visited.has(sx+','+sy)) continue;
+        const region=[],borders=new Set(),queue=[{x:sx,y:sy}],vs=new Set();
+        while(queue.length){
+            const {x,y}=queue.shift(); const k=x+','+y;
+            if(vs.has(k)) continue; vs.add(k);
+            if(board[y][x]===EMPTY){
+                region.push({x,y}); visited.add(k);
+                for(const [nx,ny] of nbrs(x,y)) if(!vs.has(nx+','+ny)) queue.push({x:nx,y:ny});
+            } else borders.add(board[y][x]);
+        }
+        if(borders.size===1){ if(borders.has(BLACK)) bt+=region.length; else wt+=region.length; }
+    }
+    return {bt,wt};
+}
+
+function updateScoreStrip(){
+    const {bt,wt}=calcTerritory();
+    document.getElementById('terr-black').textContent=bt+captures.black;
+    document.getElementById('terr-white').textContent=wt+captures.white;
+}
+
+function endGame(){
+    over=true;
+    const {bt,wt}=calcTerritory();
+    const bs2=bt+captures.black, ws2=wt+captures.white;
+    document.getElementById('rt-black').textContent=bt;
+    document.getElementById('rc-black').textContent=captures.black;
+    document.getElementById('rs-black').innerHTML=`<b>${bs2}</b>`;
+    document.getElementById('rt-white').textContent=wt;
+    document.getElementById('rc-white').textContent=captures.white;
+    document.getElementById('rs-white').innerHTML=`<b>${ws2}</b>`;
+
+    let emoji,title,msg;
+    if(bs2>ws2){
+        emoji='🏆';title=tx('winTitle');msg=tx('winMsg');
+        document.getElementById('row-black').className='winner-row';
+        document.getElementById('row-white').className='';
+        sfx.win(); launchConfetti();
+    } else if(ws2>bs2){
+        emoji='🤖';title=tx('loseTitle');msg=tx('loseMsg');
+        document.getElementById('row-black').className='';
+        document.getElementById('row-white').className='winner-row';
+        sfx.lose();
+    } else {
+        emoji='🤝';title=tx('tieTitle');msg=tx('tieMsg');
+        document.getElementById('row-black').className='';
+        document.getElementById('row-white').className='';
+    }
+    document.getElementById('res-emoji').textContent=emoji;
+    document.getElementById('res-title').textContent=title;
+    document.getElementById('res-msg').textContent=msg;
+    document.getElementById('result-modal').classList.add('show');
+}
+
+/* ─────────────────────────────────
+   UI helpers
+───────────────────────────────── */
+function setMsg(html){ document.getElementById('msg-box').innerHTML=html; }
+
+function updateTurnUI(color){
+    updateCaptureLabels();
+    const cb=document.getElementById('card-black');
+    const cw=document.getElementById('card-white');
+    const dot=document.getElementById('turn-dot');
+    const txt=document.getElementById('turn-text');
+    if(color===BLACK){
+        cb.classList.add('active-turn');   cw.classList.remove('active-turn');
+        dot.className='turn-dot black';
+        txt.textContent=tx('turnYou');
+    } else {
+        cw.classList.add('active-turn');   cb.classList.remove('active-turn');
+        dot.className='turn-dot white';
+        txt.textContent=aiThinking?tx('turnThink'):tx('turnCpu');
+    }
+}
+
+/* ─────────────────────────────────
+   Init: apply default lang text
+───────────────────────────────── */
+applyLang();
+</script>
+</body>
+</html>

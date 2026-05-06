@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f2027">
+  <title>Tic-Tac-Toe — nomorescroll</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg-1:#0f2027; --bg-2:#203a43; --bg-3:#2c5364; --accent:#ffc107; --green:#4caf50; --red:#f44336; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter','Apple SD Gothic Neo','Pretendard','PingFang SC','Hiragino Sans','Malgun Gothic',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+      background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 24px 16px 64px;
+    }
+    .top-bar {
+      width: 100%; max-width: 480px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px;
+    }
+    .back {
+      color: rgba(255,255,255,0.7); text-decoration: none; font-size: 0.95rem;
+    }
+    .back:hover { color: var(--accent); }
+    .lang-select {
+      appearance: none;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 6px 28px 6px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+
+    h1 {
+      font-size: 2rem; font-weight: 800;
+      margin-bottom: 8px; text-align: center;
+    }
+    .status {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 24px; text-align: center;
+      min-height: 1.6em;
+    }
+    .status.win { color: var(--green); font-weight: 700; }
+    .status.lose { color: var(--red); font-weight: 700; }
+    .status.draw { color: var(--accent); font-weight: 700; }
+
+    .mode-row {
+      display: flex; gap: 8px; margin-bottom: 20px;
+    }
+    .mode-btn {
+      appearance: none; border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.06); color: #fff;
+      padding: 8px 16px; border-radius: 10px;
+      font-size: 0.9rem; font-family: inherit; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mode-btn.active { border-color: var(--accent); background: rgba(255,193,7,0.15); }
+    .mode-btn:hover:not(.active) { background: rgba(255,255,255,0.1); }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: min(360px, 90vw); aspect-ratio: 1;
+      margin-bottom: 24px;
+    }
+    .cell {
+      appearance: none; border: 2px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      border-radius: 16px;
+      font-size: clamp(2.5rem, 12vw, 4rem);
+      font-weight: 800;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cell:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+    .cell:disabled { cursor: default; }
+    .cell.x { color: #4dd0e1; }
+    .cell.o { color: #ff9800; }
+    .cell.win { background: rgba(76,175,80,0.25); border-color: var(--green); }
+
+    .reset-btn {
+      appearance: none; border: none;
+      background: var(--accent); color: #1a1a1a;
+      padding: 14px 28px; border-radius: 12px;
+      font-size: 1rem; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .reset-btn:hover { filter: brightness(1.1); }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <a href="../index.html" class="back" data-i18n="back">← Back</a>
+    <select class="lang-select" id="lang-select" aria-label="Language">
+      <option value="en">English</option>
+      <option value="ko">한국어</option>
+      <option value="zh">中文</option>
+      <option value="ja">日本語</option>
+    </select>
+  </div>
+
+  <h1 data-i18n="title">Tic-Tac-Toe</h1>
+  <p class="status" id="status" data-i18n="your_turn">Your turn (X)</p>
+
+  <div class="mode-row">
+    <button class="mode-btn active" data-mode="ai" id="mode-ai" data-i18n="vs_ai">vs AI</button>
+    <button class="mode-btn" data-mode="human" id="mode-human" data-i18n="vs_human">2 Players</button>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <button class="reset-btn" id="reset" data-i18n="new_game">New Game</button>
+
+  <script>
+    const I18N = {
+      en: { back:"← Back", title:"Tic-Tac-Toe", vs_ai:"vs AI", vs_human:"2 Players", new_game:"New Game",
+        your_turn:"Your turn (X)", ai_turn:"AI is thinking...", x_turn:"X's turn", o_turn:"O's turn",
+        you_win:"You win! 🎉", you_lose:"AI wins.", x_wins:"X wins! 🎉", o_wins:"O wins! 🎉", draw:"It's a draw." },
+      ko: { back:"← 뒤로", title:"삼목 (틱택토)", vs_ai:"AI 대전", vs_human:"2인용", new_game:"새 게임",
+        your_turn:"내 차례 (X)", ai_turn:"AI 생각 중...", x_turn:"X 차례", o_turn:"O 차례",
+        you_win:"이겼어요! 🎉", you_lose:"AI가 이겼어요.", x_wins:"X 승리! 🎉", o_wins:"O 승리! 🎉", draw:"비겼어요." },
+      zh: { back:"← 返回", title:"井字棋", vs_ai:"对战AI", vs_human:"双人", new_game:"新游戏",
+        your_turn:"你的回合 (X)", ai_turn:"AI 思考中...", x_turn:"X 的回合", o_turn:"O 的回合",
+        you_win:"你赢了!🎉", you_lose:"AI 赢了。", x_wins:"X 获胜!🎉", o_wins:"O 获胜!🎉", draw:"平局。" },
+      ja: { back:"← 戻る", title:"三目並べ", vs_ai:"AI対戦", vs_human:"2人対戦", new_game:"新しいゲーム",
+        your_turn:"あなたの番 (X)", ai_turn:"AI 思考中...", x_turn:"X の番", o_turn:"O の番",
+        you_win:"あなたの勝ち! 🎉", you_lose:"AI の勝ち。", x_wins:"X の勝ち! 🎉", o_wins:"O の勝ち! 🎉", draw:"引き分け。" },
+    };
+
+    const STORAGE = "nomorescroll-lang";
+    const SUPPORTED = ["en","ko","zh","ja"];
+    function detectLang() {
+      const u = new URLSearchParams(location.search).get("lang");
+      if (u && SUPPORTED.includes(u)) { localStorage.setItem(STORAGE, u); return u; }
+      const s = localStorage.getItem(STORAGE);
+      if (s && SUPPORTED.includes(s)) return s;
+      return "en";
+    }
+    let lang = detectLang();
+    function t(k) { return (I18N[lang] || I18N.en)[k] || k; }
+    function applyLang() {
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+      });
+      updateStatus();
+    }
+
+    // Game state
+    let board = Array(9).fill(null);
+    let xTurn = true;
+    let mode = "ai"; // 'ai' or 'human'
+    let gameOver = false;
+    let winLine = [];
+
+    const LINES = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6],
+    ];
+
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+
+    function checkWinner(b) {
+      for (const line of LINES) {
+        const [a,b1,c] = line;
+        if (b[a] && b[a] === b[b1] && b[a] === b[c]) return { winner: b[a], line };
+      }
+      if (b.every(x => x)) return { winner: "draw", line: [] };
+      return null;
+    }
+
+    function updateStatus() {
+      if (!gameOver) {
+        if (mode === "ai") {
+          statusEl.textContent = xTurn ? t("your_turn") : t("ai_turn");
+        } else {
+          statusEl.textContent = xTurn ? t("x_turn") : t("o_turn");
+        }
+        statusEl.className = "status";
+        return;
+      }
+      const r = checkWinner(board);
+      if (!r) return;
+      if (r.winner === "draw") {
+        statusEl.textContent = t("draw");
+        statusEl.className = "status draw";
+      } else if (mode === "ai") {
+        if (r.winner === "X") { statusEl.textContent = t("you_win"); statusEl.className = "status win"; }
+        else { statusEl.textContent = t("you_lose"); statusEl.className = "status lose"; }
+      } else {
+        statusEl.textContent = r.winner === "X" ? t("x_wins") : t("o_wins");
+        statusEl.className = "status win";
+      }
+    }
+
+    function render() {
+      boardEl.innerHTML = "";
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement("button");
+        cell.className = "cell";
+        if (board[i]) cell.classList.add(board[i].toLowerCase());
+        if (winLine.includes(i)) cell.classList.add("win");
+        cell.textContent = board[i] || "";
+        cell.disabled = !!board[i] || gameOver || (mode === "ai" && !xTurn);
+        cell.addEventListener("click", () => handleClick(i));
+        boardEl.appendChild(cell);
+      }
+    }
+
+    function handleClick(i) {
+      if (board[i] || gameOver) return;
+      if (mode === "ai" && !xTurn) return;
+      board[i] = xTurn ? "X" : "O";
+      xTurn = !xTurn;
+      finishMove();
+    }
+
+    function finishMove() {
+      const r = checkWinner(board);
+      if (r) {
+        gameOver = true;
+        winLine = r.line;
+        render();
+        updateStatus();
+        return;
+      }
+      render();
+      updateStatus();
+      if (mode === "ai" && !xTurn && !gameOver) {
+        setTimeout(aiMove, 350);
+      }
+    }
+
+    // Simple minimax for unbeatable AI
+    function minimax(b, isMax) {
+      const r = checkWinner(b);
+      if (r) {
+        if (r.winner === "O") return 10;
+        if (r.winner === "X") return -10;
+        return 0;
+      }
+      let best = isMax ? -Infinity : Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (!b[i]) {
+          b[i] = isMax ? "O" : "X";
+          const score = minimax(b, !isMax);
+          b[i] = null;
+          if (isMax) best = Math.max(best, score);
+          else best = Math.min(best, score);
+        }
+      }
+      return best;
+    }
+
+    function aiMove() {
+      // ~25% chance to play random for kid-friendly difficulty
+      if (Math.random() < 0.25) {
+        const empty = board.map((v,i) => v ? null : i).filter(v => v !== null);
+        const pick = empty[Math.floor(Math.random() * empty.length)];
+        board[pick] = "O";
+      } else {
+        let bestScore = -Infinity, bestMove = -1;
+        for (let i = 0; i < 9; i++) {
+          if (!board[i]) {
+            board[i] = "O";
+            const score = minimax(board, false);
+            board[i] = null;
+            if (score > bestScore) { bestScore = score; bestMove = i; }
+          }
+        }
+        if (bestMove >= 0) board[bestMove] = "O";
+      }
+      xTurn = true;
+      finishMove();
+    }
+
+    function reset() {
+      board = Array(9).fill(null);
+      xTurn = true;
+      gameOver = false;
+      winLine = [];
+      render();
+      updateStatus();
+    }
+
+    document.getElementById("reset").addEventListener("click", reset);
+    document.querySelectorAll(".mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        mode = btn.dataset.mode;
+        document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b === btn));
+        reset();
+      });
+    });
+
+    const sel = document.getElementById("lang-select");
+    sel.value = lang;
+    sel.addEventListener("change", (e) => {
+      lang = e.target.value;
+      localStorage.setItem(STORAGE, lang);
+      applyLang();
+    });
+
+    applyLang();
+    render();
+  </script>
+</body>
+</html>
