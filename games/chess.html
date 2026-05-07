@@ -1734,6 +1734,11 @@ function startGame(lv) {
     canvas.height = size;
     ctx = canvas.getContext('2d');
     canvas.onclick = onCanvasClick;
+    canvas.ontouchend = function (e) {
+        e.preventDefault();
+        onCanvasClick(e);
+    };
+    canvas.style.touchAction = 'manipulation';
 
     applyLang();
     render();
@@ -1750,9 +1755,18 @@ function closeResult() { document.getElementById('result-modal').classList.remov
 ───────────────────────────────── */
 function onCanvasClick(e) {
     if (gameOver || aiThinking || currentTurn !== 'w') return;
+    if (e && e.preventDefault) e.preventDefault();
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const point =
+        (e.changedTouches && e.changedTouches[0]) ||
+        (e.touches && e.touches[0]) ||
+        e;
+    if (!point || typeof point.clientX !== 'number') return;
+    // scale CSS-displayed size → canvas internal pixel coordinate
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (point.clientX - rect.left) * scaleX;
+    const y = (point.clientY - rect.top) * scaleY;
     const c = Math.floor((x - MARGIN) / CELL);
     const r = Math.floor((y - MARGIN) / CELL);
     if (!inBounds(r, c)) return;
