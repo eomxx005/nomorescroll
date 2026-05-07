@@ -243,6 +243,27 @@
         .nms-home-btn:hover {
             background: rgba(0,0,0,0.85); border-color: #ffc107;
         }
+        .nms-controls {
+            display: flex; gap: 8px;
+            padding: 14px 8px;
+            margin: 12px -8px 4px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            justify-content: center; align-items: center;
+            flex-wrap: wrap;
+        }
+        .nms-controls > * {
+            position: static !important;
+            top: auto !important; left: auto !important;
+            right: auto !important; bottom: auto !important;
+            margin: 0 !important;
+        }
+        .nms-controls .nms-home-btn {
+            background: rgba(0,0,0,0.75);
+            color: #fff !important;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+        body.nms-in-game .nms-home-btn:not(.nms-controls .nms-home-btn) { display: none !important; }
 
         /* nomorescroll mobile patch */
         @media (max-width: 640px) {
@@ -850,6 +871,30 @@ window.addEventListener('load', () => {
     }
   }, 80);
 });
+
+/* nomorescroll: relocate home into side-panel (baduk has no vol/lang) */
+function nmsMoveControls() {
+  const sidePanel = document.querySelector('.side-panel');
+  if (!sidePanel) return false;
+  if (sidePanel.querySelector('.nms-controls')) return true;
+  const row = document.createElement('div');
+  row.className = 'nms-controls';
+  const home = document.querySelector('.nms-home-btn');
+  if (home) row.appendChild(home);
+  sidePanel.appendChild(row);
+  return true;
+}
+function nmsCheckGameScreen() {
+  if (document.querySelector('#game-screen.active')) {
+    document.body.classList.add('nms-in-game');
+    nmsMoveControls();
+  } else {
+    document.body.classList.remove('nms-in-game');
+  }
+}
+window.addEventListener('load', () => { setTimeout(nmsCheckGameScreen, 200); });
+const nmsObs = new MutationObserver(nmsCheckGameScreen);
+nmsObs.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
 </script>
 </body>
 </html>
