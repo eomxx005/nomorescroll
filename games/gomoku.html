@@ -1647,8 +1647,10 @@ function nmsCheckGameScreen() {
   }
 }
 window.addEventListener('load', () => { setTimeout(nmsCheckGameScreen, 200); });
-const nmsObs = new MutationObserver(nmsCheckGameScreen);
-nmsObs.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+document.addEventListener('click', () => {
+  setTimeout(nmsCheckGameScreen, 80);
+  setTimeout(nmsCheckGameScreen, 500);
+}, true);
 </script>
 </body>
 </html>
