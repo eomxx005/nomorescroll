@@ -230,6 +230,21 @@
       return "en";
     }
 
+    const COUNTRY_TO_LANG = {
+      KR: "ko", JP: "ja",
+      CN: "zh", TW: "zh", HK: "zh", MO: "zh", SG: "zh",
+    };
+
+    async function detectLangByIP() {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        if (!res.ok) return null;
+        const data = await res.json();
+        const country = (data.country_code || data.country || "").toUpperCase();
+        return COUNTRY_TO_LANG[country] || null;
+      } catch { return null; }
+    }
+
     function applyLang(lang) {
       const dict = I18N[lang] || I18N.en;
       document.documentElement.lang = lang;
@@ -244,6 +259,17 @@
     sel.value = detectLang();
     applyLang(sel.value);
     sel.addEventListener("change", (e) => applyLang(e.target.value));
+
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      detectLangByIP().then((detected) => {
+        if (!detected || !SUPPORTED.includes(detected)) return;
+        if (localStorage.getItem(STORAGE_KEY)) return;
+        if (detected !== sel.value) {
+          sel.value = detected;
+          applyLang(detected);
+        }
+      });
+    }
   </script>
 </body>
 </html>

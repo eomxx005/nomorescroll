@@ -464,6 +464,9 @@
         }
         body.nms-in-game .nms-home-btn:not(.nms-controls .nms-home-btn) { display: none !important; }
         body.nms-in-game #vol-ctrl:not(.nms-controls #vol-ctrl) { display: none !important; }
+        body.nms-in-game #lang-btn { display: none !important; }
+        .nms-controls #vol-ctrl { display: flex !important; position: static !important; }
+        .nms-controls #vol-btn { display: flex !important; }
 
         /* nomorescroll mobile patch */
         @media (max-width: 640px) {
@@ -1615,10 +1618,8 @@ function nmsMoveControls() {
   if (sidePanel.querySelector('.nms-controls')) return true;
   const row = document.createElement('div');
   row.className = 'nms-controls';
-  ['vol-ctrl', 'lang-btn'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.style.display = ''; row.appendChild(el); }
-  });
+  const vol = document.getElementById('vol-ctrl');
+  if (vol) { vol.style.display = 'flex'; row.appendChild(vol); }
   const home = document.querySelector('.nms-home-btn');
   if (home) row.appendChild(home);
   const players = sidePanel.querySelectorAll('.player-card');

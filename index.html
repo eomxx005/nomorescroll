@@ -442,6 +442,22 @@
       return "en";
     }
 
+    const COUNTRY_TO_LANG = {
+      KR: "ko",
+      JP: "ja",
+      CN: "zh", TW: "zh", HK: "zh", MO: "zh", SG: "zh",
+    };
+
+    async function detectLangByIP() {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        if (!res.ok) return null;
+        const data = await res.json();
+        const country = (data.country_code || data.country || "").toUpperCase();
+        return COUNTRY_TO_LANG[country] || null;
+      } catch { return null; }
+    }
+
     function applyLang(lang) {
       const dict = I18N[lang] || I18N.en;
       document.documentElement.lang = lang;
@@ -477,6 +493,21 @@
       currentLang = e.target.value;
       applyLang(currentLang);
     });
+
+    // First-visit IP-based language detection (skipped if user already chose)
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      detectLangByIP().then((detected) => {
+        if (!detected || !SUPPORTED.includes(detected)) return;
+        if (localStorage.getItem(STORAGE_KEY)) return; // user picked while waiting
+        if (detected === currentLang) {
+          localStorage.setItem(STORAGE_KEY, currentLang);
+          return;
+        }
+        currentLang = detected;
+        applyLang(currentLang);
+        langSelect.value = currentLang;
+      });
+    }
 
     // Game card → direct navigation
     document.querySelectorAll(".game-card").forEach((btn) => {
