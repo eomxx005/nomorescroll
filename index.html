@@ -343,22 +343,6 @@
     <a href="about.html" class="footer-link" data-i18n="footer_link">For parents — our promise →</a>
   </main>
 
-  <div class="modal-backdrop" id="gate" hidden>
-    <div class="modal" role="dialog" aria-labelledby="gate-title" aria-modal="true">
-      <h3 id="gate-title" data-i18n="gate_title">Parent check</h3>
-      <p class="hint" data-i18n="gate_hint">Solve a quick addition so kids can't slip past on their own.</p>
-      <div class="problem">
-        <span id="num-a">17</span> + <span id="num-b">28</span> = ?
-      </div>
-      <input type="number" id="answer" inputmode="numeric" autocomplete="off" data-i18n-placeholder="gate_input">
-      <p class="error" id="error" role="alert"></p>
-      <div class="buttons">
-        <button class="cancel" id="cancel" data-i18n="gate_cancel">Cancel</button>
-        <button class="submit" id="submit" data-i18n="gate_submit">Confirm</button>
-      </div>
-    </div>
-  </div>
-
   <script>
     const I18N = {
       en: {
@@ -500,77 +484,13 @@
       applyLang(currentLang);
     });
 
-    // Parent gate
-    (function () {
-      const gate = document.getElementById("gate");
-      const numA = document.getElementById("num-a");
-      const numB = document.getElementById("num-b");
-      const answerInput = document.getElementById("answer");
-      const errorEl = document.getElementById("error");
-      const cancelBtn = document.getElementById("cancel");
-      const submitBtn = document.getElementById("submit");
-
-      let pendingGame = null;
-      let expected = 0;
-
-      function generateProblem() {
-        const a = Math.floor(Math.random() * 80) + 11;
-        const b = Math.floor(Math.random() * 80) + 11;
-        numA.textContent = a;
-        numB.textContent = b;
-        expected = a + b;
-      }
-
-      function openGate(gameKey) {
-        pendingGame = gameKey;
-        generateProblem();
-        answerInput.value = "";
-        errorEl.textContent = "";
-        gate.hidden = false;
-        setTimeout(() => answerInput.focus(), 50);
-      }
-
-      function closeGate() {
-        gate.hidden = true;
-        pendingGame = null;
-      }
-
-      function tryUnlock() {
-        const dict = I18N[currentLang] || I18N.en;
-        const value = parseInt(answerInput.value, 10);
-        if (Number.isNaN(value)) {
-          errorEl.textContent = dict.gate_error_invalid;
-          return;
-        }
-        if (value !== expected) {
-          errorEl.textContent = dict.gate_error_wrong;
-          answerInput.select();
-          return;
-        }
-        const target = `games/${pendingGame}.html?lang=${currentLang}`;
-        closeGate();
-        window.location.href = target;
-      }
-
-      document.querySelectorAll(".game-card").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          if (btn.disabled) return;
-          openGate(btn.dataset.game);
-        });
+    // Game card → direct navigation
+    document.querySelectorAll(".game-card").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.disabled) return;
+        window.location.href = `games/${btn.dataset.game}.html?lang=${currentLang}`;
       });
-
-      submitBtn.addEventListener("click", tryUnlock);
-      cancelBtn.addEventListener("click", closeGate);
-      answerInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") { e.preventDefault(); tryUnlock(); }
-      });
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && !gate.hidden) closeGate();
-      });
-      gate.addEventListener("click", (e) => {
-        if (e.target === gate) closeGate();
-      });
-    })();
+    });
   </script>
 </body>
 </html>

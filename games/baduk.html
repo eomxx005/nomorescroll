@@ -817,5 +817,22 @@ function updateUI(currentColor) {
     }
 }
 </script>
+
+<script>
+/* nomorescroll: auto-skip intro screens */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    try { if (typeof showLevelScreen === 'function') showLevelScreen(); } catch (e) {}
+    ['lang-screen', 'intro-screen'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.classList.remove('active'); el.style.display = 'none'; }
+    });
+    if (!document.querySelector('.screen.active')) {
+      const lv = document.getElementById('level-screen');
+      if (lv) lv.classList.add('active');
+    }
+  }, 80);
+});
+</script>
 </body>
 </html>

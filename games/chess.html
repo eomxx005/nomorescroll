@@ -2010,5 +2010,28 @@ function showResult(outcome) {
     modal.classList.add('show');
 }
 </script>
+
+<script>
+/* nomorescroll: auto-skip lang + intro screens */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    try {
+      const urlLang = new URLSearchParams(location.search).get('lang') || 'en';
+      if (typeof setLang === 'function') setLang(urlLang);
+    } catch (e) {}
+    setTimeout(() => {
+      try { if (typeof showLevelScreen === 'function') showLevelScreen(); } catch (e) {}
+      ['lang-screen', 'intro-screen'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('active'); el.style.display = 'none'; }
+      });
+      if (!document.querySelector('.screen.active')) {
+        const lv = document.getElementById('level-screen');
+        if (lv) lv.classList.add('active');
+      }
+    }, 80);
+  }, 30);
+});
+</script>
 </body>
 </html>
